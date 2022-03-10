@@ -11,6 +11,6 @@ namespace Service.SimplexPayment.Client
         {
         }
 
-        public IHelloService GetHelloService() => CreateGrpcService<IHelloService>();
+        public ISimplexPaymentService GetHelloService() => CreateGrpcService<ISimplexPaymentService>();
     }
 }

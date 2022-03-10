@@ -11,7 +11,7 @@ namespace Service.SimplexPayment.Client
         {
             var factory = new SimplexPaymentClientFactory(grpcServiceUrl);
 
-            builder.RegisterInstance(factory.GetHelloService()).As<IHelloService>().SingleInstance();
+            builder.RegisterInstance(factory.GetHelloService()).As<ISimplexPaymentService>().SingleInstance();
         }
     }
 }
