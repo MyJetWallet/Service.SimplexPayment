@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Service.SimplexPayment.Domain;
 using Service.SimplexPayment.Domain.Models;
 using Service.SimplexPayment.Grpc;
 using Service.SimplexPayment.Grpc.Models;
@@ -26,11 +27,12 @@ namespace Service.SimplexPayment.Services
         private readonly ILogger<SimplexPaymentService> _logger;
         private readonly DbContextOptionsBuilder<DatabaseContext> _dbContextOptionsBuilder;
         private readonly HttpClient _client;
-
-        public SimplexPaymentService(ILogger<SimplexPaymentService> logger, DbContextOptionsBuilder<DatabaseContext> dbContextOptionsBuilder)
+        private readonly IDepositAddressRepository _addressRepository;
+        public SimplexPaymentService(ILogger<SimplexPaymentService> logger, DbContextOptionsBuilder<DatabaseContext> dbContextOptionsBuilder, IDepositAddressRepository addressRepository)
         {
             _logger = logger;
             _dbContextOptionsBuilder = dbContextOptionsBuilder;
+            _addressRepository = addressRepository;
             _client = new HttpClient();
             _client.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
@@ -101,7 +103,16 @@ namespace Service.SimplexPayment.Services
                 var link = Program.Settings.ProductionMode ? $"{ProdBase}{RequestPaymentPath}" : $"{SandboxBase}{RequestPaymentPath}";
                 var clientIdHash = GetStringSha256Hash(request.ClientId);
                 var paymentId = Guid.NewGuid().ToString("D");
-                
+                var (address, tag) = await _addressRepository.GetAddressAndTag(request.ToAsset);
+                if (string.IsNullOrWhiteSpace(address))
+                {
+                    return new ExecuteQuoteResponse()
+                    {
+                        IsSuccess = false,
+                        ErrorCode = "Address for asset not found"
+                    };
+                }
+
                 await using var context = new DatabaseContext(_dbContextOptionsBuilder.Options);
                 var intention = await context.Intentions.FirstOrDefaultAsync(t => t.QuoteId == request.QuoteId);
                 if (intention == null)
@@ -120,9 +131,9 @@ namespace Service.SimplexPayment.Services
                     AccountDetails = new AccountDetails
                     {
                         AppProviderId = Program.Settings.SimplexWalletId,
-                        AppVersionId = null,
+                        AppVersionId = "1.0.0", //TODO: get somehow
                         AppEndUserId = clientIdHash,
-                        AppInstallDate = default,
+                        AppInstallDate = DateTime.UtcNow, //TODO: get somehow
                         SignupLogin = new SignupLogin
                         {
                             UserAgent = request.UserAgent,
@@ -139,9 +150,9 @@ namespace Service.SimplexPayment.Services
                             OrderId = Guid.NewGuid().ToString("D"),
                             DestinationWallet = new DestinationWallet
                             {
-                                Currency = null,
-                                Address = null,
-                                Tag = null
+                                Currency = request.ToAsset,
+                                Address = address,
+                                Tag = tag
                             },
                             OriginalHttpRefUrl = "https://simple.app"
                         }
