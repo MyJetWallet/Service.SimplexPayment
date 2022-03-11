@@ -13,6 +13,7 @@ namespace Service.SimplexPayment.Domain.Models
         public string ToAsset { get; set; }
         public string ClientIp { get; set; }
         public string PaymentId { get; set; }
+        public string OrderId { get; set; }
         public DateTime CreationTime { get; set; }
         public string ErrorText { get; set; }
         public SimplexStatus Status { get; set; }

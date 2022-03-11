@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using MyJetWallet.Sdk.Service;
 using Service.SimplexPayment.Domain;
 using Service.SimplexPayment.Domain.Models;
 using Service.SimplexPayment.Grpc;
@@ -39,13 +40,13 @@ namespace Service.SimplexPayment.Services
             _client.DefaultRequestHeaders.Add("Authorization",$"ApiKey {Program.Settings.SimplexApiKey}");
         }
 
-        public async Task<GetQuoteResponse> GetQuote(GetQuoteRequest request)
+        public async Task<ExecuteQuoteResponse> RequestPayment(GetQuoteRequest request)
         {
             try
             {
-                var link = Program.Settings.ProductionMode ? $"{ProdBase}{GetQuotePath}" : $"{SandboxBase}{GetQuotePath}";
+                var quoteLink = Program.Settings.ProductionMode ? $"{ProdBase}{GetQuotePath}" : $"{SandboxBase}{GetQuotePath}";
                 var clientIdHash = GetStringSha256Hash(request.ClientId);
-                var response = await PostRequest<GetQuoteResponseModel, GetQuoteRequestModel>(link,
+                var quoteResponse = await PostRequest<GetQuoteResponseModel, GetQuoteRequestModel>(quoteLink,
                     new GetQuoteRequestModel
                     {
                         EndUserId = clientIdHash,
@@ -60,49 +61,24 @@ namespace Service.SimplexPayment.Services
 
                 var intention = new SimplexIntention
                 {
-                    QuoteId = response.QuoteId,
+                    QuoteId = quoteResponse.QuoteId,
                     ClientId = request.ClientId,
                     ClientIdHash = clientIdHash,
                     FromAmount = request.FromAmount,
                     FromCurrency = request.FromCurrency,
-                    ToAmount = response.DigitalMoney.Amount,
-                    ToAsset = response.DigitalMoney.Currency,
+                    ToAmount = quoteResponse.DigitalMoney.Amount,
+                    ToAsset = quoteResponse.DigitalMoney.Currency,
                     ClientIp = request.ClientIp,
                     CreationTime = DateTime.UtcNow,
                     Status = SimplexStatus.QuoteCreated
                 };
                 await using var context = new DatabaseContext(_dbContextOptionsBuilder.Options);
                 await context.UpsertAsync(new[] {intention});
-
-                return new GetQuoteResponse
-                {
-                    QuoteId = response.QuoteId,
-                    ValidUntil = response.ValidUntil,
-                    FromCurrency = response.FiatMoney.Currency,
-                    FromAmount = response.FiatMoney.TotalAmount,
-                    ToAsset = response.DigitalMoney.Currency,
-                    ToAmount = response.DigitalMoney.Amount,
-                    IsSuccess = true,
-                };
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "When getting simplex quote for clientId {clientId}", request.ClientId);
-                return new GetQuoteResponse()
-                {
-                    IsSuccess = false,
-                    ErrorCode = e.Message
-                };
-            }
-        }
-
-        public async Task<ExecuteQuoteResponse> ExecuteQuote(ExecuteQuoteRequest request)
-        {
-            try
-            {
-                var link = Program.Settings.ProductionMode ? $"{ProdBase}{RequestPaymentPath}" : $"{SandboxBase}{RequestPaymentPath}";
-                var clientIdHash = GetStringSha256Hash(request.ClientId);
+               
+                
+                var paymentLink = Program.Settings.ProductionMode ? $"{ProdBase}{RequestPaymentPath}" : $"{SandboxBase}{RequestPaymentPath}";
                 var paymentId = Guid.NewGuid().ToString("D");
+                var orderId = Guid.NewGuid().ToString("D");
                 var (address, tag) = await _addressRepository.GetAddressAndTag(request.ToAsset);
                 if (string.IsNullOrWhiteSpace(address))
                 {
@@ -113,20 +89,11 @@ namespace Service.SimplexPayment.Services
                     };
                 }
 
-                await using var context = new DatabaseContext(_dbContextOptionsBuilder.Options);
-                var intention = await context.Intentions.FirstOrDefaultAsync(t => t.QuoteId == request.QuoteId);
-                if (intention == null)
-                    return new ExecuteQuoteResponse()
-                    {
-                        IsSuccess = false,
-                        ErrorCode = "Intention not found"
-                    };
-
                 intention.PaymentId = paymentId;
                 intention.Status = SimplexStatus.QuoteConfirmed;
                 await context.UpsertAsync(new[] {intention});
                 
-                var response = await PostRequest<PaymentResponseModel, PaymentRequestModel>(link, new PaymentRequestModel
+                var response = await PostRequest<PaymentResponseModel, PaymentRequestModel>(paymentLink, new PaymentRequestModel
                 {
                     AccountDetails = new AccountDetails
                     {
@@ -145,9 +112,9 @@ namespace Service.SimplexPayment.Services
                     {
                         PaymentDetails = new PaymentDetails
                         {
-                            QuoteId = request.QuoteId,
+                            QuoteId = quoteResponse.QuoteId,
                             PaymentId = paymentId,
-                            OrderId = Guid.NewGuid().ToString("D"),
+                            OrderId = orderId,
                             DestinationWallet = new DestinationWallet
                             {
                                 Currency = request.ToAsset,
@@ -160,6 +127,7 @@ namespace Service.SimplexPayment.Services
                 });
                 
                 intention.Status = SimplexStatus.PaymentStarted;
+                intention.OrderId = orderId;
                 await context.UpsertAsync(new[] {intention});
 
                 return new ExecuteQuoteResponse()
@@ -170,7 +138,7 @@ namespace Service.SimplexPayment.Services
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "When getting simplex quote for clientId {clientId}", request.ClientId);
+                _logger.LogError(e, "When getting simplex payment for clientId {clientId}, request {requestJson}", request.ClientId, request.ToJson());
                 return new ()
                 {
                     IsSuccess = false,

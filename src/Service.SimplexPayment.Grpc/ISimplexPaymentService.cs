@@ -8,9 +8,9 @@ namespace Service.SimplexPayment.Grpc
     public interface ISimplexPaymentService
     {
         [OperationContract]
-        Task<GetQuoteResponse> GetQuote(GetQuoteRequest request);
+        Task<ExecuteQuoteResponse> RequestPayment(GetQuoteRequest request);
         
-        [OperationContract]
-        Task<ExecuteQuoteResponse> ExecuteQuote(ExecuteQuoteRequest request);
+        // [OperationContract]
+        // Task<ExecuteQuoteResponse> ExecuteQuote(ExecuteQuoteRequest request);
     }
 }

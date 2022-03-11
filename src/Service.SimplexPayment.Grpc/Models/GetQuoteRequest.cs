@@ -15,5 +15,7 @@ namespace Service.SimplexPayment.Grpc.Models
         public decimal FromAmount { get; set; }
         [DataMember(Order = 5)]
         public string ToAsset { get; set; }
+        [DataMember(Order = 6)]
+        public string UserAgent { get; set; }
     }
 }
