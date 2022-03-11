@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Threading.Tasks;
+using MyNoSqlServer.Abstractions;
 using MyNoSqlServer.DataWriter;
 using Service.SimplexPayment.Domain;
 using Service.SimplexPayment.Domain.Models;
@@ -8,9 +9,9 @@ namespace Service.SimplexPayment.Services
 {
     public class DepositAddressRepositoryTemp : IDepositAddressRepository
     {
-        private readonly MyNoSqlServerDataWriter<DepositAddressNoSqlEntity> _writer;
+        private readonly IMyNoSqlServerDataWriter<DepositAddressNoSqlEntity> _writer;
 
-        public DepositAddressRepositoryTemp(MyNoSqlServerDataWriter<DepositAddressNoSqlEntity> writer)
+        public DepositAddressRepositoryTemp(IMyNoSqlServerDataWriter<DepositAddressNoSqlEntity> writer)
         {
             _writer = writer;
         }

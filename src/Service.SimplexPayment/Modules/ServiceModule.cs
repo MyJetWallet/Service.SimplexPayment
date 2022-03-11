@@ -15,7 +15,7 @@ namespace Service.SimplexPayment.Modules
             builder.RegisterMyNoSqlWriter<DepositAddressNoSqlEntity>(() => Program.Settings.MyNoSqlWriterUrl,
                 DepositAddressNoSqlEntity.TableName);
 
-            builder.RegisterType<DepositAddressRepositoryTemp>().As<IDepositAddressRepository>().SingleInstance();
+            builder.RegisterType<DepositAddressRepositoryTemp>().As<IDepositAddressRepository>().SingleInstance().AutoActivate();
         }
     }
 }

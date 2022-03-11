@@ -21,11 +21,11 @@ namespace TestApp
             var writer = new MyNoSqlServerDataWriter<DepositAddressNoSqlEntity>(() => "http://192.168.70.80:5123", DepositAddressNoSqlEntity.TableName, true);
             var accountId = "97";
             
-            await writer.InsertOrReplaceAsync(DepositAddressNoSqlEntity.Create(accountId, "BTC", "tb1q2xmz43p6uvlsslplwuv3d9034x9f2rhg8cz22d", null));
+            await writer.InsertOrReplaceAsync(DepositAddressNoSqlEntity.Create(accountId, "BTC", "tb1q2xmz43p6uvlsslplwuv3d9034x9f2rhg8cz22d", String.Empty));
             await writer.InsertOrReplaceAsync(DepositAddressNoSqlEntity.Create(accountId, "XRP", "r3TsxjBWPVV8Sbk4Q2vpt59jKRUViTjZRB", "1147442382"));
             await writer.InsertOrReplaceAsync(DepositAddressNoSqlEntity.Create(accountId, "XLM", "GA5J5BISNT45WOWRHKYQW7LCO3R56TR7YHVMRNBBPRQWF3YPQFMO6BWG", "3941159564"));
-            await writer.InsertOrReplaceAsync(DepositAddressNoSqlEntity.Create(accountId, "ETH", "0x6c53728aA6D5dAC8667dd62Af741B102C2050e0A", null));
-            await writer.InsertOrReplaceAsync(DepositAddressNoSqlEntity.Create(accountId, "LTC", "tltc1q2xmz43p6uvlsslplwuv3d9034x9f2rhg7sq56y", null));
+            await writer.InsertOrReplaceAsync(DepositAddressNoSqlEntity.Create(accountId, "ETH", "0x6c53728aA6D5dAC8667dd62Af741B102C2050e0A", String.Empty));
+            await writer.InsertOrReplaceAsync(DepositAddressNoSqlEntity.Create(accountId, "LTC", "tltc1q2xmz43p6uvlsslplwuv3d9034x9f2rhg7sq56y", String.Empty));
 
             Console.WriteLine("End");
             Console.ReadLine();

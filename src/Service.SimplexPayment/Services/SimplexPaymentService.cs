@@ -100,12 +100,20 @@ namespace Service.SimplexPayment.Services
                         AppProviderId = Program.Settings.SimplexWalletId,
                         AppVersionId = "1.0.0", //TODO: get somehow
                         AppEndUserId = clientIdHash,
-                        AppInstallDate = DateTime.UtcNow, //TODO: get somehow
+                        AppInstallDate = DateTime.UtcNow, //TODO: get somehow,
+                        Email = String.Empty,
+                        Phone = String.Empty,
                         SignupLogin = new SignupLogin
                         {
+                            Location = String.Empty,
+                            Uaid = String.Empty,
+                            AcceptLanguage = String.Empty,
+                            HttpAcceptLanguage = String.Empty,
                             UserAgent = request.UserAgent,
+                            CookieSessionId = String.Empty,
                             Timestamp = DateTime.UtcNow,
-                            Ip = request.ClientIp
+                            Ip = request.ClientIp,
+
                         }
                     },
                     TransactionDetails = new TransactionDetails
