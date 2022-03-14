@@ -40,35 +40,35 @@ namespace Service.SimplexPayment.Services
             _client.DefaultRequestHeaders.Add("Authorization",$"ApiKey {Program.Settings.SimplexApiKey}");
         }
 
-        public async Task<ExecuteQuoteResponse> RequestPayment(GetQuoteRequest request)
+        public async Task<ExecuteQuoteResponse> RequestPayment(RequestPaymentRequest requestPaymentRequest)
         {
             try
             {
                 var quoteLink = Program.Settings.ProductionMode ? $"{ProdBase}{GetQuotePath}" : $"{SandboxBase}{GetQuotePath}";
-                var clientIdHash = GetStringSha256Hash(request.ClientId);
+                var clientIdHash = GetStringSha256Hash(requestPaymentRequest.ClientId);
                 var quoteResponse = await PostRequest<GetQuoteResponseModel, GetQuoteRequestModel>(quoteLink,
                     new GetQuoteRequestModel
                     {
                         EndUserId = clientIdHash,
-                        DigitalCurrency = request.ToAsset,
-                        FiatCurrency = request.FromCurrency,
-                        RequestedCurrency = request.FromCurrency,
-                        RequestedAmount = request.FromAmount,
+                        DigitalCurrency = requestPaymentRequest.ToAsset,
+                        FiatCurrency = requestPaymentRequest.FromCurrency,
+                        RequestedCurrency = requestPaymentRequest.FromCurrency,
+                        RequestedAmount = requestPaymentRequest.FromAmount,
                         WalletId = Program.Settings.SimplexWalletId,
-                        ClientIp = request.ClientIp,
+                        ClientIp = requestPaymentRequest.ClientIp,
                         PaymentMethods = new() {"credit_card"}
                     });
 
                 var intention = new SimplexIntention
                 {
                     QuoteId = quoteResponse.QuoteId,
-                    ClientId = request.ClientId,
+                    ClientId = requestPaymentRequest.ClientId,
                     ClientIdHash = clientIdHash,
-                    FromAmount = request.FromAmount,
-                    FromCurrency = request.FromCurrency,
+                    FromAmount = requestPaymentRequest.FromAmount,
+                    FromCurrency = requestPaymentRequest.FromCurrency,
                     ToAmount = quoteResponse.DigitalMoney.Amount,
                     ToAsset = quoteResponse.DigitalMoney.Currency,
-                    ClientIp = request.ClientIp,
+                    ClientIp = requestPaymentRequest.ClientIp,
                     CreationTime = DateTime.UtcNow,
                     Status = SimplexStatus.QuoteCreated
                 };
@@ -79,15 +79,6 @@ namespace Service.SimplexPayment.Services
                 var paymentLink = Program.Settings.ProductionMode ? $"{ProdBase}{RequestPaymentPath}" : $"{SandboxBase}{RequestPaymentPath}";
                 var paymentId = Guid.NewGuid().ToString("D");
                 var orderId = Guid.NewGuid().ToString("D");
-                var (address, tag) = await _addressRepository.GetAddressAndTag(request.ToAsset);
-                if (string.IsNullOrWhiteSpace(address))
-                {
-                    return new ExecuteQuoteResponse()
-                    {
-                        IsSuccess = false,
-                        ErrorCode = "Address for asset not found"
-                    };
-                }
 
                 intention.PaymentId = paymentId;
                 intention.Status = SimplexStatus.QuoteConfirmed;
@@ -109,10 +100,10 @@ namespace Service.SimplexPayment.Services
                             Uaid = String.Empty,
                             AcceptLanguage = String.Empty,
                             HttpAcceptLanguage = String.Empty,
-                            UserAgent = request.UserAgent,
+                            UserAgent = requestPaymentRequest.UserAgent,
                             CookieSessionId = String.Empty,
                             Timestamp = DateTime.UtcNow,
-                            Ip = request.ClientIp,
+                            Ip = requestPaymentRequest.ClientIp,
 
                         }
                     },
@@ -125,9 +116,9 @@ namespace Service.SimplexPayment.Services
                             OrderId = orderId,
                             DestinationWallet = new DestinationWallet
                             {
-                                Currency = request.ToAsset,
-                                Address = address,
-                                Tag = tag
+                                Currency = requestPaymentRequest.ToAsset,
+                                Address = requestPaymentRequest.DepositAddress,
+                                Tag = requestPaymentRequest.DepositTag ?? String.Empty
                             },
                             OriginalHttpRefUrl = "https://simple.app"
                         }
@@ -146,7 +137,7 @@ namespace Service.SimplexPayment.Services
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "When getting simplex payment for clientId {clientId}, request {requestJson}", request.ClientId, request.ToJson());
+                _logger.LogError(e, "When getting simplex payment for clientId {clientId}, request {requestJson}", requestPaymentRequest.ClientId, requestPaymentRequest.ToJson());
                 return new ()
                 {
                     IsSuccess = false,

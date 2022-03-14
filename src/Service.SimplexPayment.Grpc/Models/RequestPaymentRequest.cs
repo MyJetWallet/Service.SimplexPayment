@@ -3,7 +3,7 @@ using System.Runtime.Serialization;
 namespace Service.SimplexPayment.Grpc.Models
 {
     [DataContract]
-    public class GetQuoteRequest
+    public class RequestPaymentRequest
     {
         [DataMember(Order = 1)]
         public string ClientId { get; set; }
@@ -17,5 +17,9 @@ namespace Service.SimplexPayment.Grpc.Models
         public string ToAsset { get; set; }
         [DataMember(Order = 6)]
         public string UserAgent { get; set; }
+        [DataMember(Order = 7)]
+        public string DepositAddress { get; set; }
+        [DataMember(Order = 8)]
+        public string DepositTag { get; set; }
     }
 }
