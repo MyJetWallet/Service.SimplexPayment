@@ -15,6 +15,9 @@ namespace Service.SimplexPayment
     public class Program
     {
         public const string SettingsFileName = ".myjetwallet";
+        public const string EncodingKeyStr = "ENCODING_KEY";
+        
+        public static byte[] EncodingKey { get; set; }
 
         public static SettingsModel Settings { get; private set; }
 

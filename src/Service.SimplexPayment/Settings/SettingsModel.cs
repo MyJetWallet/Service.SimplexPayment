@@ -36,8 +36,9 @@ namespace Service.SimplexPayment.Settings
         public string PaymentLink { get; set; }
         
         [YamlProperty("SimplexPayment.ProductionMode")]
-        public bool ProductionMode { get; set; } 
-        // [YamlProperty("SimplexPayment.SimplexBrokerWalletId")]
-        // public string SimplexBrokerWalletId { get; set; }
+        public bool ProductionMode { get; set; }
+        
+        [YamlProperty("SimplexPayment.ClientProfileGrpcServiceUrl")]
+        public string ClientProfileGrpcServiceUrl { get; set; }
     }
 }

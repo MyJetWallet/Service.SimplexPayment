@@ -1,22 +1,16 @@
-﻿using System.Reflection;
+﻿using System;
+using System.Text;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Autofac;
-using MyJetWallet.Sdk.GrpcMetrics;
 using MyJetWallet.Sdk.GrpcSchema;
 using MyJetWallet.Sdk.Postgres;
 using MyJetWallet.Sdk.Service;
-using Prometheus;
-using ProtoBuf.Grpc.Server;
 using Service.SimplexPayment.Grpc;
 using Service.SimplexPayment.Modules;
 using Service.SimplexPayment.Postgres;
 using Service.SimplexPayment.Services;
-using SimpleTrading.BaseMetrics;
-using SimpleTrading.ServiceStatusReporterConnector;
 
 namespace Service.SimplexPayment
 {
@@ -27,9 +21,11 @@ namespace Service.SimplexPayment
             services.ConfigureJetWallet<ApplicationLifetimeManager>(Program.Settings.ZipkinUrl);
 
             DatabaseContext.LoggerFactory = Program.LogFactory;
-            services.AddDatabase(DatabaseContext.Schema, Program.Settings.PostgresConnectionString.Replace("Ssl Mode=Require", "Ssl Mode=VerifyFull"),
+            services.AddDatabase(DatabaseContext.Schema, Program.Settings.PostgresConnectionString,
                 o => new DatabaseContext(o));
             DatabaseContext.LoggerFactory = null;
+            
+            GetEnvVariables();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -45,6 +41,16 @@ namespace Service.SimplexPayment
             builder.ConfigureJetWallet();
             builder.RegisterModule<SettingsModule>();
             builder.RegisterModule<ServiceModule>();
+        }
+        
+        private void GetEnvVariables()
+        {
+            var key = Environment.GetEnvironmentVariable(Program.EncodingKeyStr);
+            
+            if (string.IsNullOrEmpty(key))
+                throw new Exception($"Env Variable {Program.EncodingKeyStr} is not found");
+
+            Program.EncodingKey = Encoding.UTF8.GetBytes(key);
         }
     }
 }

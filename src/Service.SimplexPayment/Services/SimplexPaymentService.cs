@@ -1,19 +1,21 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyJetWallet.Sdk.Service;
-using Service.SimplexPayment.Domain;
+using Service.ClientProfile.Grpc;
+using Service.ClientProfile.Grpc.Models.Requests;
 using Service.SimplexPayment.Domain.Models;
 using Service.SimplexPayment.Grpc;
 using Service.SimplexPayment.Grpc.Models;
 using Service.SimplexPayment.Postgres;
-using Service.SimplexPayment.Settings;
+using SimpleTrading.Common.Helpers;
+using HexConverterUtils = MyJetWallet.Sdk.Service.HexConverterUtils;
 
 namespace Service.SimplexPayment.Services
 {
@@ -28,28 +30,35 @@ namespace Service.SimplexPayment.Services
         private readonly ILogger<SimplexPaymentService> _logger;
         private readonly DbContextOptionsBuilder<DatabaseContext> _dbContextOptionsBuilder;
         private readonly HttpClient _client;
-        private readonly IDepositAddressRepository _addressRepository;
-        public SimplexPaymentService(ILogger<SimplexPaymentService> logger, DbContextOptionsBuilder<DatabaseContext> dbContextOptionsBuilder, IDepositAddressRepository addressRepository)
+        private readonly IClientProfileService _clientProfile;
+
+        public SimplexPaymentService(ILogger<SimplexPaymentService> logger,
+            DbContextOptionsBuilder<DatabaseContext> dbContextOptionsBuilder,
+            IClientProfileService clientProfile)
         {
             _logger = logger;
             _dbContextOptionsBuilder = dbContextOptionsBuilder;
-            _addressRepository = addressRepository;
+            _clientProfile = clientProfile;
             _client = new HttpClient();
             _client.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
-            _client.DefaultRequestHeaders.Add("Authorization",$"ApiKey {Program.Settings.SimplexApiKey}");
+            _client.DefaultRequestHeaders.Add("Authorization",$"ApiKey {DecodeKey(Program.Settings.SimplexApiKey)}");
         }
 
         public async Task<ExecuteQuoteResponse> RequestPayment(RequestPaymentRequest requestPaymentRequest)
         {
             try
             {
+                var profile = await _clientProfile.GetOrCreateProfile(new GetClientProfileRequest
+                {
+                    ClientId = requestPaymentRequest.ClientId
+                });
                 var quoteLink = Program.Settings.ProductionMode ? $"{ProdBase}{GetQuotePath}" : $"{SandboxBase}{GetQuotePath}";
-                var clientIdHash = GetStringSha256Hash(requestPaymentRequest.ClientId);
+               
                 var quoteResponse = await PostRequest<GetQuoteResponseModel, GetQuoteRequestModel>(quoteLink,
                     new GetQuoteRequestModel
                     {
-                        EndUserId = clientIdHash,
+                        EndUserId = profile.ExternalClientId,
                         DigitalCurrency = requestPaymentRequest.ToAsset,
                         FiatCurrency = requestPaymentRequest.FromCurrency,
                         RequestedCurrency = requestPaymentRequest.FromCurrency,
@@ -63,7 +72,7 @@ namespace Service.SimplexPayment.Services
                 {
                     QuoteId = quoteResponse.QuoteId,
                     ClientId = requestPaymentRequest.ClientId,
-                    ClientIdHash = clientIdHash,
+                    ClientIdHash = profile.ExternalClientId,
                     FromAmount = requestPaymentRequest.FromAmount,
                     FromCurrency = requestPaymentRequest.FromCurrency,
                     ToAmount = quoteResponse.DigitalMoney.Amount,
@@ -90,7 +99,7 @@ namespace Service.SimplexPayment.Services
                     {
                         AppProviderId = Program.Settings.SimplexWalletId,
                         AppVersionId = "1.0.0", //TODO: get somehow
-                        AppEndUserId = clientIdHash,
+                        AppEndUserId = profile.ExternalClientId,
                         AppInstallDate = DateTime.UtcNow, //TODO: get somehow,
                         Email = String.Empty,
                         Phone = String.Empty,
@@ -163,16 +172,11 @@ namespace Service.SimplexPayment.Services
                 throw;
             }
         }
-        
-        private static string GetStringSha256Hash(string text)
-        {
-            if (String.IsNullOrEmpty(text))
-                return String.Empty;
 
-            using var sha = System.Security.Cryptography.SHA256.Create();
-            byte[] textData = System.Text.Encoding.UTF8.GetBytes(text);
-            byte[] hash = sha.ComputeHash(textData);
-            return BitConverter.ToString(hash).Replace("-", String.Empty);
+        private static string DecodeKey(string apiKey)
+        {
+            var data = HexConverterUtils.HexStringToByteArray(apiKey);
+            return Encoding.UTF8.GetString(AesEncodeDecode.Decode(data, Program.EncodingKey));
         }
     }
 }
