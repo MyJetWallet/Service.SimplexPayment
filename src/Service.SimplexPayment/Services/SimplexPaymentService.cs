@@ -1,9 +1,4 @@
 ﻿using System;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -11,38 +6,32 @@ using MyJetWallet.Sdk.Service;
 using Service.ClientProfile.Grpc;
 using Service.ClientProfile.Grpc.Models.Requests;
 using Service.SimplexPayment.Domain.Models;
-using Service.SimplexPayment.Grpc;
 using Service.SimplexPayment.Grpc.Models;
 using Service.SimplexPayment.Postgres;
-using SimpleTrading.Common.Helpers;
-using HexConverterUtils = MyJetWallet.Sdk.Service.HexConverterUtils;
 
 namespace Service.SimplexPayment.Services
 {
-    public class SimplexPaymentService: ISimplexPaymentService
+    public class SimplexPaymentService
     {
         private const string SandboxBase = "https://sandbox.test-simplexcc.com/";
         private const string ProdBase = "https://backend-wallet-api.simplexcc.com/";
         private const string GetQuotePath = "wallet/merchant/v2/quote";
         private const string RequestPaymentPath = "wallet/merchant/v2/payments/partner/data";
+        private const string EventsPath = "events";
 
-        
         private readonly ILogger<SimplexPaymentService> _logger;
         private readonly DbContextOptionsBuilder<DatabaseContext> _dbContextOptionsBuilder;
-        private readonly HttpClient _client;
         private readonly IClientProfileService _clientProfile;
+        private readonly SimplexHttpClient _client;
 
         public SimplexPaymentService(ILogger<SimplexPaymentService> logger,
             DbContextOptionsBuilder<DatabaseContext> dbContextOptionsBuilder,
-            IClientProfileService clientProfile)
+            IClientProfileService clientProfile, SimplexHttpClient client)
         {
             _logger = logger;
             _dbContextOptionsBuilder = dbContextOptionsBuilder;
             _clientProfile = clientProfile;
-            _client = new HttpClient();
-            _client.DefaultRequestHeaders.Accept.Add(
-                new MediaTypeWithQualityHeaderValue("application/json"));
-            _client.DefaultRequestHeaders.Add("Authorization",$"ApiKey {DecodeKey(Program.Settings.SimplexApiKey)}");
+            _client = client;
         }
 
         public async Task<ExecuteQuoteResponse> RequestPayment(RequestPaymentRequest requestPaymentRequest)
@@ -53,9 +42,8 @@ namespace Service.SimplexPayment.Services
                 {
                     ClientId = requestPaymentRequest.ClientId
                 });
-                var quoteLink = Program.Settings.ProductionMode ? $"{ProdBase}{GetQuotePath}" : $"{SandboxBase}{GetQuotePath}";
                
-                var quoteResponse = await PostRequest<GetQuoteResponseModel, GetQuoteRequestModel>(quoteLink,
+                var quoteResponse = await _client.GetQuote(
                     new GetQuoteRequestModel
                     {
                         EndUserId = profile.ExternalClientId,
@@ -85,7 +73,6 @@ namespace Service.SimplexPayment.Services
                 await context.UpsertAsync(new[] {intention});
                
                 
-                var paymentLink = Program.Settings.ProductionMode ? $"{ProdBase}{RequestPaymentPath}" : $"{SandboxBase}{RequestPaymentPath}";
                 var paymentId = Guid.NewGuid().ToString("D");
                 var orderId = Guid.NewGuid().ToString("D");
 
@@ -93,7 +80,7 @@ namespace Service.SimplexPayment.Services
                 intention.Status = SimplexStatus.QuoteConfirmed;
                 await context.UpsertAsync(new[] {intention});
                 
-                var response = await PostRequest<PaymentResponseModel, PaymentRequestModel>(paymentLink, new PaymentRequestModel
+                var response =  await _client.RequestPayment(new PaymentRequestModel
                 {
                     AccountDetails = new AccountDetails
                     {
@@ -155,28 +142,6 @@ namespace Service.SimplexPayment.Services
             }
         }
         
-        private async Task<T1> PostRequest<T1, T2>(string uri, T2 request)
-        {
-            var responseMessage = String.Empty;
-            try
-            {
-                using var response = await _client.PostAsJsonAsync<T2>(uri, request);
-                responseMessage = await response.Content.ReadAsStringAsync();
-                response.EnsureSuccessStatusCode();
-                var responseBody = await response.Content.ReadAsStreamAsync();
-                return await JsonSerializer.DeserializeAsync<T1>(responseBody);
-            }
-            catch (Exception e)
-            {
-                _logger.LogError(e, "When executing request to path {path}. Response {response}", uri, responseMessage);
-                throw;
-            }
-        }
 
-        private static string DecodeKey(string apiKey)
-        {
-            var data = HexConverterUtils.HexStringToByteArray(apiKey);
-            return Encoding.UTF8.GetString(AesEncodeDecode.Decode(data, Program.EncodingKey));
-        }
     }
 }

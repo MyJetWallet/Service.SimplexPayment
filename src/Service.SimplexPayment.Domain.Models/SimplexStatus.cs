@@ -5,7 +5,9 @@ namespace Service.SimplexPayment.Domain.Models
         QuoteCreated,
         QuoteConfirmed,
         PaymentStarted,
+        PaymentApproved,
+        Cancelled,
         PaymentCompleted,
-        Cancelled
+
     }
 }

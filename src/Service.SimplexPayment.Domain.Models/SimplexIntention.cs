@@ -1,21 +1,24 @@
 using System;
+using System.Runtime.Serialization;
 
 namespace Service.SimplexPayment.Domain.Models
 {
+    [DataContract]
     public class SimplexIntention
     {
-        public string QuoteId { get; set; }
-        public string ClientId { get; set; }
-        public string ClientIdHash { get; set; }
-        public decimal FromAmount { get; set; }
-        public string FromCurrency { get; set; }
-        public decimal ToAmount { get; set; }
-        public string ToAsset { get; set; }
-        public string ClientIp { get; set; }
-        public string PaymentId { get; set; }
-        public string OrderId { get; set; }
-        public DateTime CreationTime { get; set; }
-        public string ErrorText { get; set; }
-        public SimplexStatus Status { get; set; }
+        public const string TopicName = "jetwallet-simplex-intention";
+        [DataMember(Order = 1)]public string QuoteId { get; set; }
+        [DataMember(Order = 2)]public string ClientId { get; set; }
+        [DataMember(Order = 3)]public string ClientIdHash { get; set; }
+        [DataMember(Order = 4)]public decimal FromAmount { get; set; }
+        [DataMember(Order = 5)]public string FromCurrency { get; set; }
+        [DataMember(Order = 6)]public decimal ToAmount { get; set; }
+        [DataMember(Order = 7)] public string ToAsset { get; set; }
+        [DataMember(Order = 8)]public string ClientIp { get; set; }
+        [DataMember(Order = 9)]public string PaymentId { get; set; }
+        [DataMember(Order = 10)]public string OrderId { get; set; }
+        [DataMember(Order = 11)]public DateTime CreationTime { get; set; }
+        [DataMember(Order = 12)]public string ErrorText { get; set; }
+        [DataMember(Order = 13)]public SimplexStatus Status { get; set; }
     }
 }
