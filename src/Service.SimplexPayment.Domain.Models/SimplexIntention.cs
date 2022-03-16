@@ -20,5 +20,7 @@ namespace Service.SimplexPayment.Domain.Models
         [DataMember(Order = 11)]public DateTime CreationTime { get; set; }
         [DataMember(Order = 12)]public string ErrorText { get; set; }
         [DataMember(Order = 13)]public SimplexStatus Status { get; set; }
+        [DataMember(Order = 14)]public string BlockchainTxHash { get; set; }
+
     }
 }

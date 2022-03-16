@@ -64,18 +64,28 @@ namespace Service.SimplexPayment.Jobs
                     eventsToSave.Add(simplexEvent);
                     _logger.LogDebug("Got simplex event for existing intention, event: {eventJson}", simplexEvent.ToJson());
 
+                    //payment_simplexcc_crypto_sent
                     //pending_simplexcc_payment_to_partner
                     //pending_simplexcc_approval
-                    //simplexcc_declined
+                    //simplexcc_declined 
+                    //cancelled
                     
-                    if (simplexEvent.Payment.Status == "simplexcc_approved" ||
-                        simplexEvent.Payment.Status == "simplexcc_declined")
+                    if (simplexEvent.Payment.Status == "pending_simplexcc_payment_to_partner" ||
+                        simplexEvent.Payment.Status == "payment_simplexcc_crypto_sent" || 
+                        simplexEvent.Payment.Status == "cancelled")
                     {
-                        intention.Status = simplexEvent.Payment.Status == "simplexcc_declined" ? SimplexStatus.Cancelled : SimplexStatus.PaymentCompleted;
+                        if (simplexEvent.Payment.Status == "payment_simplexcc_crypto_sent")
+                        {
+                            intention.Status = SimplexStatus.PaymentCompleted;
+                            intention.BlockchainTxHash = simplexEvent.Payment.BlockchainTxHash;
+                        }
+                        else
+                        {
+                            intention.Status = simplexEvent.Payment.Status == "pending_simplexcc_payment_to_partner" ? SimplexStatus.PaymentApproved : SimplexStatus.Cancelled;
+                        }
 
                         await _publisher.PublishAsync(intention);
                         await context.UpsertAsync(new[] {intention});
-                        await _client.DeleteEvent(simplexEvent.EventId);
                     }
 
                     if (simplexEvent.Payment.Status == "pending_simplexcc_payment_to_partner" ||
@@ -83,6 +93,8 @@ namespace Service.SimplexPayment.Jobs
                     {
                         eventsToCalculate.Add(simplexEvent);
                     }
+                    
+                    await _client.DeleteEvent(simplexEvent.EventId);
                 }
 
 

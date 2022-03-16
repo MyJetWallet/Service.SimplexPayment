@@ -49,6 +49,9 @@ public class Payment
 
     [JsonPropertyName("partner_end_user_id")]
     public string PartnerEndUserId { get; set; }
+    
+    [JsonPropertyName("blockchain_txn_hash")]
+    public string BlockchainTxHash { get; set; }
 }
 
 public class SimplexEvent
