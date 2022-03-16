@@ -108,7 +108,7 @@ namespace Service.SimplexPayment.Jobs
                 var groupsByAsset = groupByClient.GroupBy(t => t.Payment.CryptoTotalAmount.Currency);
                 var dictionary = groupsByAsset.ToDictionary(group => group.Key, group => (decimal) group.Select(t => t.Payment.CryptoTotalAmount.Amount).Sum());
                 
-                payments.Add(clientIdDictionary[groupByClient.Key], dictionary);
+                payments.TryAdd(clientIdDictionary[groupByClient.Key], dictionary);
             }
 
             await _paymentWriter.CleanAndBulkInsertAsync(payments.Select(t =>
