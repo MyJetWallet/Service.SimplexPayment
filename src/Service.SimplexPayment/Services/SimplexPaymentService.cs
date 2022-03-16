@@ -5,6 +5,8 @@ using Microsoft.Extensions.Logging;
 using MyJetWallet.Sdk.Service;
 using Service.ClientProfile.Grpc;
 using Service.ClientProfile.Grpc.Models.Requests;
+using Service.PersonalData.Grpc;
+using Service.PersonalData.Grpc.Contracts;
 using Service.SimplexPayment.Domain.Models;
 using Service.SimplexPayment.Grpc.Models;
 using Service.SimplexPayment.Postgres;
@@ -13,25 +15,20 @@ namespace Service.SimplexPayment.Services
 {
     public class SimplexPaymentService
     {
-        private const string SandboxBase = "https://sandbox.test-simplexcc.com/";
-        private const string ProdBase = "https://backend-wallet-api.simplexcc.com/";
-        private const string GetQuotePath = "wallet/merchant/v2/quote";
-        private const string RequestPaymentPath = "wallet/merchant/v2/payments/partner/data";
-        private const string EventsPath = "events";
-
         private readonly ILogger<SimplexPaymentService> _logger;
         private readonly DbContextOptionsBuilder<DatabaseContext> _dbContextOptionsBuilder;
         private readonly IClientProfileService _clientProfile;
         private readonly SimplexHttpClient _client;
-
+        private readonly IPersonalDataServiceGrpc _personalData;
         public SimplexPaymentService(ILogger<SimplexPaymentService> logger,
             DbContextOptionsBuilder<DatabaseContext> dbContextOptionsBuilder,
-            IClientProfileService clientProfile, SimplexHttpClient client)
+            IClientProfileService clientProfile, SimplexHttpClient client, IPersonalDataServiceGrpc personalData)
         {
             _logger = logger;
             _dbContextOptionsBuilder = dbContextOptionsBuilder;
             _clientProfile = clientProfile;
             _client = client;
+            _personalData = personalData;
         }
 
         public async Task<ExecuteQuoteResponse> RequestPayment(RequestPaymentRequest requestPaymentRequest)
@@ -42,7 +39,12 @@ namespace Service.SimplexPayment.Services
                 {
                     ClientId = requestPaymentRequest.ClientId
                 });
-               
+
+                var pd = await _personalData.GetByIdAsync(new GetByIdRequest()
+                {
+                    Id = requestPaymentRequest.ClientId
+                });
+                
                 var quoteResponse = await _client.GetQuote(
                     new GetQuoteRequestModel
                     {
@@ -87,9 +89,9 @@ namespace Service.SimplexPayment.Services
                         AppProviderId = Program.Settings.SimplexWalletId,
                         AppVersionId = "1.0.0", //TODO: get somehow
                         AppEndUserId = profile.ExternalClientId,
-                        AppInstallDate = DateTime.UtcNow, //TODO: get somehow,
-                        Email = String.Empty,
-                        Phone = String.Empty,
+                        AppInstallDate = pd.PersonalData.CreatedAt, 
+                        Email = pd.PersonalData.Email,
+                        Phone = pd.PersonalData.Phone,
                         SignupLogin = new SignupLogin
                         {
                             Location = String.Empty,

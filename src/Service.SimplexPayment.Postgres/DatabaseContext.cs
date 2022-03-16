@@ -26,6 +26,9 @@ namespace Service.SimplexPayment.Postgres
             modelBuilder.Entity<SimplexIntention>().ToTable(IntentionsTableName);
             modelBuilder.Entity<SimplexIntention>().HasKey(e => e.QuoteId);
             modelBuilder.Entity<SimplexIntention>().Property(e => e.CreationTime).HasDefaultValue(DateTime.MinValue);
+            
+            modelBuilder.Entity<SimplexIntention>().HasIndex(e => e.PaymentId);
+            modelBuilder.Entity<SimplexIntention>().HasIndex(e => e.ClientIdHash);
         }
        
         public async Task<int> UpsertAsync(IEnumerable<SimplexIntention> entities)

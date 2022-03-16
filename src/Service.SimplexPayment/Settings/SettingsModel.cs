@@ -40,5 +40,9 @@ namespace Service.SimplexPayment.Settings
         
         [YamlProperty("SimplexPayment.ClientProfileGrpcServiceUrl")]
         public string ClientProfileGrpcServiceUrl { get; set; }
+        
+        [YamlProperty("SimplexPayment.PersonalDataServiceUrl")]
+        public string PersonalDataServiceUrl { get; set; }
+
     }
 }

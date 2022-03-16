@@ -7,7 +7,7 @@ namespace Service.SimplexPayment.Domain.Models;
 public class GetEventsResponseModel
 {
     [JsonPropertyName("events")]
-    public List<Event> Events { get; set; }
+    public List<SimplexEvent> Events { get; set; }
 }
 public class FiatTotalAmount
 {
@@ -51,7 +51,7 @@ public class Payment
     public string PartnerEndUserId { get; set; }
 }
 
-public class Event
+public class SimplexEvent
 {
     [JsonPropertyName("event_id")]
     public string EventId { get; set; }
