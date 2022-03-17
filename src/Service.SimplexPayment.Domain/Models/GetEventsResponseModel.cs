@@ -12,7 +12,7 @@ public class GetEventsResponseModel
 public class FiatTotalAmount
 {
     [JsonPropertyName("amount")]
-    public int Amount { get; set; }
+    public decimal Amount { get; set; }
 
     [JsonPropertyName("currency")]
     public string Currency { get; set; }
@@ -21,7 +21,7 @@ public class FiatTotalAmount
 public class CryptoTotalAmount
 {
     [JsonPropertyName("amount")]
-    public double Amount { get; set; }
+    public decimal Amount { get; set; }
 
     [JsonPropertyName("currency")]
     public string Currency { get; set; }
