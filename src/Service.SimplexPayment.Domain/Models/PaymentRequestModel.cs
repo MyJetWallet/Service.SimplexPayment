@@ -12,18 +12,8 @@ public class PaymentRequestModel
 
 public class SignupLogin
 {
-    [JsonPropertyName("location")] public string Location { get; set; }
-
-    [JsonPropertyName("uaid")] public string Uaid { get; set; }
-
-    [JsonPropertyName("accept_language")] public string AcceptLanguage { get; set; }
-
-    [JsonPropertyName("http_accept_language")] public string HttpAcceptLanguage { get; set; }
-
     [JsonPropertyName("user_agent")] public string UserAgent { get; set; }
-
-    [JsonPropertyName("cookie_session_id")] public string CookieSessionId { get; set; }
-
+    
     [JsonPropertyName("timestamp")] public DateTime Timestamp { get; set; }
 
     [JsonPropertyName("ip")] public string Ip { get; set; }

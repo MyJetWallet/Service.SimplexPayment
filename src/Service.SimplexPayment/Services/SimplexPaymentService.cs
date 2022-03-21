@@ -87,19 +87,14 @@ namespace Service.SimplexPayment.Services
                     AccountDetails = new AccountDetails
                     {
                         AppProviderId = Program.Settings.SimplexWalletId,
-                        AppVersionId = "1.0.0", //TODO: get somehow
+                        AppVersionId = "1.2.0", //TODO: get somehow
                         AppEndUserId = profile.ExternalClientId,
                         AppInstallDate = pd.PersonalData.CreatedAt, 
                         Email = pd.PersonalData.Email,
                         Phone = pd.PersonalData.Phone,
                         SignupLogin = new SignupLogin
                         {
-                            Location = String.Empty,
-                            Uaid = String.Empty,
-                            AcceptLanguage = String.Empty,
-                            HttpAcceptLanguage = String.Empty,
                             UserAgent = requestPaymentRequest.UserAgent,
-                            CookieSessionId = String.Empty,
                             Timestamp = DateTime.UtcNow,
                             Ip = requestPaymentRequest.ClientIp,
 
