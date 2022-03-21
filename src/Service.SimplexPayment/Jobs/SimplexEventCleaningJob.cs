@@ -102,7 +102,7 @@ namespace Service.SimplexPayment.Jobs
                     await _simplexWriter.InsertOrReplaceAsync(SimplexEventsNoSqlEntity.Create(eventsToSave));
 
                 if(eventsToCalculate.Any())
-                    await CalculatePendingBalances(eventsToCalculate, clientIdDictionary);
+                    await CalculatePendingBalances(context);
             }
             catch (Exception e)
             {
@@ -111,22 +111,24 @@ namespace Service.SimplexPayment.Jobs
             }
         }
 
-        private async Task CalculatePendingBalances(List<SimplexEvent> simplexEvents, Dictionary<string, string> clientIdDictionary)
+        private async Task CalculatePendingBalances(DatabaseContext context)
         {
-            var payments = new Dictionary<string, Dictionary<string, decimal>>();
-            var groupsByClient = simplexEvents.GroupBy(t => t.Payment.PartnerEndUserId);
-            foreach (var groupByClient in groupsByClient)
-            {
-                var groupsByAsset = groupByClient.GroupBy(t => t.Payment.CryptoTotalAmount.Currency);
-                var dictionary = groupsByAsset.ToDictionary(group => group.Key, group => (decimal) group.Select(t => t.Payment.CryptoTotalAmount.Amount).Sum());
-                
-                payments.TryAdd(clientIdDictionary[groupByClient.Key], dictionary);
-            }
+            var data = await context.Intentions
+                .Where(e => e.Status == SimplexStatus.PaymentApproved || e.Status == SimplexStatus.PaymentStarted)
+                .GroupBy(e => new {e.ClientId, e.ToAsset})
+                .Select(e => new {ClientId = e.Key.ClientId, Asset = e.Key.ToAsset, Amount = e.Sum(i => i.ToAmount)})
+                .ToListAsync();
 
-            await _paymentWriter.CleanAndBulkInsertAsync(payments.Select(t =>
-                PendingPaymentNoSqlEntity.Create(t.Key, t.Value)));
+            var items = data
+                .GroupBy(e => e.ClientId)
+                .Select(e => PendingPaymentNoSqlEntity.Create(
+                    e.Key,
+                    e.ToDictionary(i => i.Asset, i => i.Amount)))
+                .ToList();
+            
+            await _paymentWriter.CleanAndBulkInsertAsync(items);
         }
-        
+
         public void Start()
         {
             _timer.Start();
