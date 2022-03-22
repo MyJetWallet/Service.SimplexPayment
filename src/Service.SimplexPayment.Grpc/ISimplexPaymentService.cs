@@ -10,7 +10,7 @@ namespace Service.SimplexPayment.Grpc
         [OperationContract]
         Task<ExecuteQuoteResponse> RequestPayment(RequestPaymentRequest requestPaymentRequest);
         
-        // [OperationContract]
-        // Task<ExecuteQuoteResponse> ExecuteQuote(ExecuteQuoteRequest request);
+        [OperationContract]
+        Task<GetIntentionsResponse> GetIntentions(GetIntentionsRequest request);
     }
 }

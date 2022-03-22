@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -20,9 +22,12 @@ namespace Service.SimplexPayment.Services
         private readonly IClientProfileService _clientProfile;
         private readonly SimplexHttpClient _client;
         private readonly IPersonalDataServiceGrpc _personalData;
-        public SimplexPaymentService(ILogger<SimplexPaymentService> logger,
+        public SimplexPaymentService(
+            ILogger<SimplexPaymentService> logger,
             DbContextOptionsBuilder<DatabaseContext> dbContextOptionsBuilder,
-            IClientProfileService clientProfile, SimplexHttpClient client, IPersonalDataServiceGrpc personalData)
+            IClientProfileService clientProfile, 
+            SimplexHttpClient client, 
+            IPersonalDataServiceGrpc personalData)
         {
             _logger = logger;
             _dbContextOptionsBuilder = dbContextOptionsBuilder;
@@ -87,7 +92,7 @@ namespace Service.SimplexPayment.Services
                     AccountDetails = new AccountDetails
                     {
                         AppProviderId = Program.Settings.SimplexWalletId,
-                        AppVersionId = "1.2.0", //TODO: get somehow
+                        AppVersionId = requestPaymentRequest.UserAgent.Split(';')[0],
                         AppEndUserId = profile.ExternalClientId,
                         AppInstallDate = pd.PersonalData.CreatedAt, 
                         Email = pd.PersonalData.Email,
@@ -139,6 +144,35 @@ namespace Service.SimplexPayment.Services
             }
         }
         
+        public async Task<List<SimplexIntention>> GetIntentions(int take, DateTime lastSeen, string searchText)
+        {
+            try
+            {
+                await using var context = new DatabaseContext(_dbContextOptionsBuilder.Options);
+                if (take == 0)
+                    take = 20;
+                
+                var query = context.Intentions.AsQueryable();
+                if (lastSeen != DateTime.MinValue)
+                    query = query.Where(t => t.CreationTime < lastSeen);
+
+                if (!string.IsNullOrWhiteSpace(searchText))
+                    query = query.Where(t => t.ClientId.Contains(searchText) ||
+                                     t.PaymentId.Contains(searchText) ||
+                                     t.FromCurrency.Contains(searchText) ||
+                                     t.ToAsset.Contains(searchText) ||
+                                     t.BlockchainTxHash.Contains(searchText) ||
+                                     t.QuoteId.Contains(searchText) ||
+                                     t.OrderId.Contains(searchText));
+
+                return await query.OrderByDescending(t => t.CreationTime).Take(take).ToListAsync();
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "When getting simplex intentions");
+                throw;
+            }
+        }
 
     }
 }
