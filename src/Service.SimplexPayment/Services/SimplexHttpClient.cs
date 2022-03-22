@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using MyJetWallet.Sdk.Service;
 using Service.SimplexPayment.Domain.Models;
 using Service.SimplexPayment.Grpc.Models;
 using SimpleTrading.Common.Helpers;
@@ -66,6 +67,8 @@ namespace Service.SimplexPayment.Services
             {
                 using var response = await _client.PostAsJsonAsync<T2>(uri, request);
                 responseMessage = await response.Content.ReadAsStringAsync();
+                _logger.LogDebug("Sending request to {requestUrl} with body {requestJson}, {responseJson}", uri, request.ToJson(), responseMessage);
+                
                 response.EnsureSuccessStatusCode();
                 var responseBody = await response.Content.ReadAsStreamAsync();
                 return await JsonSerializer.DeserializeAsync<T1>(responseBody);
