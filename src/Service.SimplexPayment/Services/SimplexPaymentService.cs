@@ -87,7 +87,6 @@ namespace Service.SimplexPayment.Services
                 var orderId = Guid.NewGuid().ToString("D");
 
                 intention.PaymentId = paymentId;
-                intention.Status = SimplexStatus.QuoteConfirmed;
                 await context.UpsertAsync(new[] {intention});
                 
                 var response =  await _client.RequestPayment(new PaymentRequestModel
@@ -126,7 +125,7 @@ namespace Service.SimplexPayment.Services
                     }
                 });
                 
-                intention.Status = SimplexStatus.PaymentStarted;
+                intention.Status = SimplexStatus.QuoteCreated;
                 intention.OrderId = orderId;
                 await context.UpsertAsync(new[] {intention});
 
