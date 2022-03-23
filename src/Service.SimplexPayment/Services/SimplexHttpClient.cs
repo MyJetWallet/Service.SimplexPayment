@@ -1,16 +1,12 @@
+using Microsoft.Extensions.Logging;
+using MyJetWallet.Sdk.Service;
+using Service.SimplexPayment.Domain.Models;
 using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
-using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using MyJetWallet.Sdk.Service;
-using Service.SimplexPayment.Domain.Models;
-using Service.SimplexPayment.Grpc.Models;
-using SimpleTrading.Common.Helpers;
-using HexConverterUtils = MyJetWallet.Sdk.Service.HexConverterUtils;
 
 namespace Service.SimplexPayment.Services
 {
@@ -22,8 +18,12 @@ namespace Service.SimplexPayment.Services
         private const string RequestPaymentPath = "wallet/merchant/v2/payments/partner/data";
         private const string EventsPath = "wallet/merchant/v2/events";
         
+        private readonly object _lock = new object();
         private readonly HttpClient _client;
         private readonly ILogger<SimplexHttpClient> _logger;
+
+        private bool _isApiKeySetUp = false;
+        public bool IsApiKeySetUp { get { return _isApiKeySetUp; } }
 
         public SimplexHttpClient(ILogger<SimplexHttpClient> logger)
         {
@@ -32,7 +32,6 @@ namespace Service.SimplexPayment.Services
             _client = new HttpClient();
             _client.DefaultRequestHeaders.Accept.Add(
                 new MediaTypeWithQualityHeaderValue("application/json"));
-            _client.DefaultRequestHeaders.Add("Authorization",$"ApiKey {DecodeKey(Program.Settings.SimplexApiKey)}");
         }
 
 
@@ -79,6 +78,21 @@ namespace Service.SimplexPayment.Services
                 throw;
             }
         }
+
+        public void SetUpApiKey(string apiKey)
+        {
+            if (!_isApiKeySetUp)
+            {
+                lock (_lock)
+                {
+                    if (!_isApiKeySetUp)
+                    {
+                        _client.DefaultRequestHeaders.Add("Authorization", $"ApiKey {apiKey}");
+                        _isApiKeySetUp = true;
+                    }
+                }
+            }
+        }
         
         
         private async Task<T1> GetRequest<T1>(string uri)
@@ -113,12 +127,6 @@ namespace Service.SimplexPayment.Services
                 _logger.LogError(e, "When executing request to path {path}. Response {response}", uri, responseMessage);
                 throw;
             }
-        }
-
-        private static string DecodeKey(string apiKey)
-        {
-            var data = HexConverterUtils.HexStringToByteArray(apiKey);
-            return Encoding.UTF8.GetString(AesEncodeDecode.Decode(data, Program.EncodingKey));
         }
     }
 }

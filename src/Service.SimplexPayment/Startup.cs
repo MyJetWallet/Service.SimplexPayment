@@ -11,6 +11,7 @@ using Service.SimplexPayment.Grpc;
 using Service.SimplexPayment.Modules;
 using Service.SimplexPayment.Postgres;
 using Service.SimplexPayment.Services;
+using MyJetWallet.ApiSecurityManager.Autofac;
 
 namespace Service.SimplexPayment
 {
@@ -24,8 +25,6 @@ namespace Service.SimplexPayment
             services.AddDatabase(DatabaseContext.Schema, Program.Settings.PostgresConnectionString,
                 o => new DatabaseContext(o));
             DatabaseContext.LoggerFactory = null;
-            
-            GetEnvVariables();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -33,6 +32,7 @@ namespace Service.SimplexPayment
             app.ConfigureJetWallet(env, endpoints =>
             {
                 endpoints.MapGrpcSchema<SimplexPaymentServiceGrpc, ISimplexPaymentService>();
+                endpoints.RegisterGrpcServices();
             });
         }
 
@@ -41,16 +41,6 @@ namespace Service.SimplexPayment
             builder.ConfigureJetWallet();
             builder.RegisterModule<SettingsModule>();
             builder.RegisterModule<ServiceModule>();
-        }
-        
-        private void GetEnvVariables()
-        {
-            var key = Environment.GetEnvironmentVariable(Program.EncodingKeyStr);
-            
-            if (string.IsNullOrEmpty(key))
-                throw new Exception($"Env Variable {Program.EncodingKeyStr} is not found");
-
-            Program.EncodingKey = Encoding.UTF8.GetBytes(key);
         }
     }
 }

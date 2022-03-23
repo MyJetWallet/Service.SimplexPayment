@@ -1,9 +1,11 @@
 ﻿using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using MyJetWallet.ApiSecurityManager.Notifications;
 using MyJetWallet.Sdk.NoSql;
 using MyJetWallet.Sdk.Service;
 using MyJetWallet.Sdk.ServiceBus;
 using Service.SimplexPayment.Jobs;
+using Service.SimplexPayment.Services;
 
 namespace Service.SimplexPayment
 {
@@ -13,17 +15,35 @@ namespace Service.SimplexPayment
         private readonly MyNoSqlClientLifeTime _noSqlClientLifeTime;
         private readonly ServiceBusLifeTime _serviceBusLifeTime;
         private readonly SimplexEventCleaningJob _cleaningJob;
-        public ApplicationLifetimeManager(IHostApplicationLifetime appLifetime, ILogger<ApplicationLifetimeManager> logger, MyNoSqlClientLifeTime noSqlClientLifeTime, ServiceBusLifeTime serviceBusLifeTime, SimplexEventCleaningJob cleaningJob)
+        private readonly SimplexHttpClient _simplexHttpClient;
+        private readonly INotificatorSubscriber _notificatorSubscriber;
+
+        public ApplicationLifetimeManager(
+            IHostApplicationLifetime appLifetime,
+            ILogger<ApplicationLifetimeManager> logger,
+            MyNoSqlClientLifeTime noSqlClientLifeTime,
+            ServiceBusLifeTime serviceBusLifeTime,
+            SimplexEventCleaningJob cleaningJob,
+            SimplexHttpClient simplexHttpClient,
+            INotificatorSubscriber notificatorSubscriber)
             : base(appLifetime)
         {
             _logger = logger;
             _noSqlClientLifeTime = noSqlClientLifeTime;
             _serviceBusLifeTime = serviceBusLifeTime;
             _cleaningJob = cleaningJob;
+            _simplexHttpClient = simplexHttpClient;
+            _notificatorSubscriber = notificatorSubscriber;
         }
 
         protected override void OnStarted()
         {
+            _notificatorSubscriber.Subscribe((apiKey) =>
+            {
+                if (apiKey.Id == Program.Settings.ApiKeyId)
+                    _simplexHttpClient.SetUpApiKey(apiKey.ApiKeyValue);
+            });
+
             _logger.LogInformation("OnStarted has been called.");
             _serviceBusLifeTime.Start();
             _noSqlClientLifeTime.Start();
