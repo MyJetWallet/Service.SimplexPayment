@@ -44,5 +44,8 @@ namespace Service.SimplexPayment.Settings
         [YamlProperty("SimplexPayment.PersonalDataServiceUrl")]
         public string PersonalDataServiceUrl { get; set; }
 
+        [YamlProperty("SimplexPayment.ApiKeyId")]
+        public string ApiKeyId { get; set; }
+
     }
 }

@@ -28,7 +28,13 @@ namespace Service.SimplexPayment.Jobs
         private readonly IMyNoSqlServerDataWriter<PendingPaymentNoSqlEntity> _paymentWriter;
         private readonly IMyNoSqlServerDataWriter<SimplexEventsNoSqlEntity> _simplexWriter;
         
-        public SimplexEventCleaningJob(ILogger<SimplexEventCleaningJob> logger, SimplexHttpClient client, DbContextOptionsBuilder<DatabaseContext> dbContextOptionsBuilder, IServiceBusPublisher<SimplexIntention> publisher, IMyNoSqlServerDataWriter<PendingPaymentNoSqlEntity> paymentWriter, IMyNoSqlServerDataWriter<SimplexEventsNoSqlEntity> simplexWriter)
+        public SimplexEventCleaningJob(
+            ILogger<SimplexEventCleaningJob> logger, 
+            SimplexHttpClient client,
+            DbContextOptionsBuilder<DatabaseContext> dbContextOptionsBuilder,
+            IServiceBusPublisher<SimplexIntention> publisher,
+            IMyNoSqlServerDataWriter<PendingPaymentNoSqlEntity> paymentWriter,
+            IMyNoSqlServerDataWriter<SimplexEventsNoSqlEntity> simplexWriter)
         {
             _logger = logger;
             _client = client;
@@ -44,6 +50,12 @@ namespace Service.SimplexPayment.Jobs
         {
             try
             {
+                if (!_client.IsApiKeySetUp)
+                {
+                    _logger.LogError("Cant get Simplex Events Api Key is not set");
+                    return;
+                }
+
                 var eventsResponse = await _client.GetEvents();
                 if (!eventsResponse.Events.Any())
                     return;

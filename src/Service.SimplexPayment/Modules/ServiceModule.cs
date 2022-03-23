@@ -1,6 +1,7 @@
 ﻿using Autofac;
 using Autofac.Core;
 using Autofac.Core.Registration;
+using MyJetWallet.ApiSecurityManager.Autofac;
 using MyJetWallet.Sdk.NoSql;
 using MyJetWallet.Sdk.ServiceBus;
 using Service.ClientProfile.Client;
@@ -50,6 +51,8 @@ namespace Service.SimplexPayment.Modules
                 .AsSelf()
                 .SingleInstance()
                 .AutoActivate();
+
+            builder.RegisterEncryptionServiceClient("simplex-payment", () => Program.Settings.MyNoSqlWriterUrl);
         }
     }
 }

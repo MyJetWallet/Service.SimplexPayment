@@ -25,8 +25,8 @@ namespace Service.SimplexPayment.Services
         public SimplexPaymentService(
             ILogger<SimplexPaymentService> logger,
             DbContextOptionsBuilder<DatabaseContext> dbContextOptionsBuilder,
-            IClientProfileService clientProfile, 
-            SimplexHttpClient client, 
+            IClientProfileService clientProfile,
+            SimplexHttpClient client,
             IPersonalDataServiceGrpc personalData)
         {
             _logger = logger;
@@ -40,6 +40,13 @@ namespace Service.SimplexPayment.Services
         {
             try
             {
+                if (!_client.IsApiKeySetUp)
+                    return new ExecuteQuoteResponse()
+                    {
+                        ErrorCode = "ApiKeyIsNotSetUp",
+                        IsSuccess = false,
+                    };
+
                 var profile = await _clientProfile.GetOrCreateProfile(new GetClientProfileRequest
                 {
                     ClientId = requestPaymentRequest.ClientId
@@ -49,7 +56,7 @@ namespace Service.SimplexPayment.Services
                 {
                     Id = requestPaymentRequest.ClientId
                 });
-                
+
                 var quoteResponse = await _client.GetQuote(
                     new GetQuoteRequestModel
                     {
@@ -60,7 +67,7 @@ namespace Service.SimplexPayment.Services
                         RequestedAmount = requestPaymentRequest.FromAmount,
                         WalletId = Program.Settings.SimplexWalletId,
                         ClientIp = requestPaymentRequest.ClientIp,
-                        PaymentMethods = new() {"credit_card"}
+                        PaymentMethods = new() { "credit_card" }
                     });
 
                 var intention = new SimplexIntention
@@ -80,14 +87,14 @@ namespace Service.SimplexPayment.Services
                     Fee = quoteResponse.FiatMoney.TotalAmount - quoteResponse.FiatMoney.BaseAmount
                 };
                 await using var context = new DatabaseContext(_dbContextOptionsBuilder.Options);
-                await context.UpsertAsync(new[] {intention});
-               
-                
+                await context.UpsertAsync(new[] { intention });
+
+
                 var paymentId = Guid.NewGuid().ToString("D");
                 var orderId = Guid.NewGuid().ToString("D");
 
                 intention.PaymentId = paymentId;
-                await context.UpsertAsync(new[] {intention});
+                await context.UpsertAsync(new[] { intention });
                 
                 var response =  await _client.RequestPayment(new PaymentRequestModel
                 {
@@ -96,7 +103,7 @@ namespace Service.SimplexPayment.Services
                         AppProviderId = Program.Settings.SimplexWalletId,
                         AppVersionId = requestPaymentRequest.UserAgent.Split(';')[0],
                         AppEndUserId = profile.ExternalClientId,
-                        AppInstallDate = pd.PersonalData.CreatedAt, 
+                        AppInstallDate = pd.PersonalData.CreatedAt,
                         Email = pd.PersonalData.Email,
                         Phone = pd.PersonalData.Phone,
                         SignupLogin = new SignupLogin
@@ -127,7 +134,7 @@ namespace Service.SimplexPayment.Services
                 
                 intention.Status = SimplexStatus.QuoteCreated;
                 intention.OrderId = orderId;
-                await context.UpsertAsync(new[] {intention});
+                await context.UpsertAsync(new[] { intention });
 
                 return new ExecuteQuoteResponse()
                 {
@@ -138,14 +145,14 @@ namespace Service.SimplexPayment.Services
             catch (Exception e)
             {
                 _logger.LogError(e, "When getting simplex payment for clientId {clientId}, request {requestJson}", requestPaymentRequest.ClientId, requestPaymentRequest.ToJson());
-                return new ()
+                return new()
                 {
                     IsSuccess = false,
                     ErrorCode = e.Message
                 };
             }
         }
-        
+
         public async Task<List<SimplexIntention>> GetIntentions(int take, DateTime lastSeen, string searchText)
         {
             try
@@ -153,7 +160,7 @@ namespace Service.SimplexPayment.Services
                 await using var context = new DatabaseContext(_dbContextOptionsBuilder.Options);
                 if (take == 0)
                     take = 20;
-                
+
                 var query = context.Intentions.AsQueryable();
                 if (lastSeen != DateTime.MinValue)
                     query = query.Where(t => t.CreationTime < lastSeen);
