@@ -60,44 +60,28 @@ namespace Service.SimplexPayment.Jobs
                     if(intention == null)
                         continue;
 
-                    clientIdDictionary.TryAdd(intention.ClientIdHash, intention.ClientId);
-                    eventsToSave.Add(simplexEvent);
                     _logger.LogDebug("Got simplex event for existing intention, event: {eventJson}", simplexEvent.ToJson());
 
-                    //payment_simplexcc_crypto_sent
-                    //pending_simplexcc_payment_to_partner
-                    //pending_simplexcc_approval
-                    //simplexcc_declined 
-                    //cancelled
+                    clientIdDictionary.TryAdd(intention.ClientIdHash, intention.ClientId);
+                    eventsToSave.Add(simplexEvent);
+
+                    var status = MapEventToStatus(simplexEvent.Name);
                     
-                    if (simplexEvent.Payment.Status == "pending_simplexcc_payment_to_partner" ||
-                        simplexEvent.Payment.Status == "payment_simplexcc_crypto_sent" || 
-                        simplexEvent.Payment.Status == "cancelled")
-                    {
-                        if (simplexEvent.Payment.Status == "payment_simplexcc_crypto_sent")
-                        {
-                            intention.Status = SimplexStatus.PaymentCompleted;
-                            intention.BlockchainTxHash = simplexEvent.Payment.BlockchainTxHash;
-                        }
-                        else
-                        {
-                            intention.Status = simplexEvent.Payment.Status == "pending_simplexcc_payment_to_partner" ? SimplexStatus.PaymentApproved : SimplexStatus.Cancelled;
-                        }
+                    if(intention.Status > status)
+                        continue;
+                    
+                    intention.Status = status;
+                    intention.BlockchainTxHash = simplexEvent.Payment.BlockchainTxHash;
+                    
+                    await _publisher.PublishAsync(intention);
+                    await context.UpsertAsync(new[] {intention});
 
-                        await _publisher.PublishAsync(intention);
-                        await context.UpsertAsync(new[] {intention});
-                    }
-
-                    if (simplexEvent.Payment.Status == "pending_simplexcc_payment_to_partner" ||
-                        simplexEvent.Payment.Status == "pending_simplexcc_approval")
-                    {
+                    if (simplexEvent.Name == "payment_request_submitted" || simplexEvent.Name == "payment_simplexcc_approved") 
                         eventsToCalculate.Add(simplexEvent);
-                    }
-                    
+
                     await _client.DeleteEvent(simplexEvent.EventId);
                 }
-
-
+                
                 if (eventsToSave.Any())
                     await _simplexWriter.InsertOrReplaceAsync(SimplexEventsNoSqlEntity.Create(eventsToSave));
 
@@ -109,12 +93,26 @@ namespace Service.SimplexPayment.Jobs
                 _logger.LogError(e, "When cleaning Simplex events");
                 throw;
             }
+            
+            //locals
+            SimplexStatus MapEventToStatus(string name)
+            {
+                return name switch
+                {
+                    "payment_request_submitted" => SimplexStatus.PaymentSubmitted,
+                    "payment_simplexcc_approved" => SimplexStatus.PaymentApproved,
+                    "payment_simplexcc_declined" => SimplexStatus.Declined,
+                    "payment_simplexcc_refunded" => SimplexStatus.Refunded,
+                    "payment_simplexcc_crypto_sent" => SimplexStatus.CryptoSent,
+                    _ => SimplexStatus.QuoteCreated
+                };
+            }
         }
 
         private async Task CalculatePendingBalances(DatabaseContext context)
         {
             var data = await context.Intentions
-                .Where(e => e.Status == SimplexStatus.PaymentApproved || e.Status == SimplexStatus.PaymentStarted)
+                .Where(e => e.Status == SimplexStatus.PaymentSubmitted || e.Status == SimplexStatus.PaymentApproved)
                 .GroupBy(e => new {e.ClientId, e.ToAsset})
                 .Select(e => new {ClientId = e.Key.ClientId, Asset = e.Key.ToAsset, Amount = e.Sum(i => i.ToAmount)})
                 .ToListAsync();
