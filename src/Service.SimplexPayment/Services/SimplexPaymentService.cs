@@ -74,7 +74,10 @@ namespace Service.SimplexPayment.Services
                     ToAsset = quoteResponse.DigitalMoney.Currency,
                     ClientIp = requestPaymentRequest.ClientIp,
                     CreationTime = DateTime.UtcNow,
-                    Status = SimplexStatus.QuoteCreated
+                    Status = SimplexStatus.QuoteCreated,
+                    BaseFiatAmount = quoteResponse.FiatMoney.BaseAmount,
+                    TotalFiatAmount = quoteResponse.FiatMoney.TotalAmount,
+                    Fee = quoteResponse.FiatMoney.TotalAmount - quoteResponse.FiatMoney.BaseAmount
                 };
                 await using var context = new DatabaseContext(_dbContextOptionsBuilder.Options);
                 await context.UpsertAsync(new[] {intention});

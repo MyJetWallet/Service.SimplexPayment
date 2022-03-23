@@ -21,6 +21,10 @@ namespace Service.SimplexPayment.Domain.Models
         [DataMember(Order = 12)]public string ErrorText { get; set; }
         [DataMember(Order = 13)]public SimplexStatus Status { get; set; }
         [DataMember(Order = 14)]public string BlockchainTxHash { get; set; }
+        [DataMember(Order = 15)]public decimal TotalFiatAmount { get; set; }
+        [DataMember(Order = 16)]public decimal BaseFiatAmount { get; set; }
+        [DataMember(Order = 17)]public decimal Fee { get; set; }
+
 
     }
 }
