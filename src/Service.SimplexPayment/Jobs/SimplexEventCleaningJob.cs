@@ -61,7 +61,6 @@ namespace Service.SimplexPayment.Jobs
                     return;
 
                 var eventsToSave = new List<SimplexEvent>();
-                var eventsToCalculate = new List<SimplexEvent>();
                 var clientIdDictionary = new Dictionary<string, string>();
                 await using var context = new DatabaseContext(_dbContextOptionsBuilder.Options);
 
@@ -87,18 +86,14 @@ namespace Service.SimplexPayment.Jobs
                     
                     await _publisher.PublishAsync(intention);
                     await context.UpsertAsync(new[] {intention});
-
-                    if (simplexEvent.Name == "payment_request_submitted" || simplexEvent.Name == "payment_simplexcc_approved") 
-                        eventsToCalculate.Add(simplexEvent);
-
+                    
                     await _client.DeleteEvent(simplexEvent.EventId);
                 }
                 
                 if (eventsToSave.Any())
                     await _simplexWriter.InsertOrReplaceAsync(SimplexEventsNoSqlEntity.Create(eventsToSave));
-
-                if(eventsToCalculate.Any())
-                    await CalculatePendingBalances(context);
+                
+                await CalculatePendingBalances(context);
             }
             catch (Exception e)
             {
