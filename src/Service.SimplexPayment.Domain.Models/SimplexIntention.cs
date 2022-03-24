@@ -24,7 +24,7 @@ namespace Service.SimplexPayment.Domain.Models
         [DataMember(Order = 15)]public decimal TotalFiatAmount { get; set; }
         [DataMember(Order = 16)]public decimal BaseFiatAmount { get; set; }
         [DataMember(Order = 17)]public decimal Fee { get; set; }
-
-
+        [DataMember(Order = 18)]public decimal ReceivedAmount { get; set; }
+        [DataMember(Order = 19)]public decimal BlockchainFee { get; set; }
     }
 }

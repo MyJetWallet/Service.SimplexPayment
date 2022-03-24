@@ -32,8 +32,6 @@ namespace Service.SimplexPayment.Modules
             var serviceBus = builder.RegisterMyServiceBusTcpClient(() => Program.Settings.SpotServiceBusHostPort, Program.LogFactory);
             builder.RegisterMyServiceBusPublisher<SimplexIntention>(serviceBus, SimplexIntention.TopicName, true);
             
-            builder.RegisterType<DepositAddressRepositoryTemp>().As<IDepositAddressRepository>().SingleInstance().AutoActivate();
-            
             builder
                 .RegisterType<SimplexHttpClient>()
                 .AsSelf()

@@ -88,6 +88,15 @@ namespace Service.SimplexPayment.Jobs
                     await context.UpsertAsync(new[] {intention});
                     
                     await _client.DeleteEvent(simplexEvent.EventId);
+
+                    if (!Program.Settings.ProductionMode 
+                        && simplexEvent.Name == "payment_simplexcc_approved")
+                    {
+                        intention.Status = SimplexStatus.CryptoSent;
+                        intention.BlockchainTxHash = $"simplex|mock|{Guid.NewGuid():N};";
+                        await _publisher.PublishAsync(intention);
+                        await context.UpsertAsync(new[] {intention});
+                    }
                 }
                 
                 if (eventsToSave.Any())

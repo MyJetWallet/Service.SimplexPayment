@@ -29,6 +29,8 @@ namespace Service.SimplexPayment.Postgres
             
             modelBuilder.Entity<SimplexIntention>().HasIndex(e => e.PaymentId);
             modelBuilder.Entity<SimplexIntention>().HasIndex(e => e.ClientIdHash);
+            modelBuilder.Entity<SimplexIntention>().HasIndex(e => e.BlockchainTxHash);
+
         }
        
         public async Task<int> UpsertAsync(IEnumerable<SimplexIntention> entities)

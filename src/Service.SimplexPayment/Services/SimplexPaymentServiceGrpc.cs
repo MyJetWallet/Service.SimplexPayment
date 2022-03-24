@@ -25,5 +25,7 @@ namespace Service.SimplexPayment.Services
                 Intentions = list
             };
         }
+
+        public async Task<IntentionsInProgressResponse> CheckIntentionsInProgress(IntentionsInProgressRequest request) => await _simplexPaymentService.CheckIntentionsInProgress(request);
     }
 }

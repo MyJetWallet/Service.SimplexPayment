@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MyJetWallet.Sdk.Service;
+using MyJetWallet.Sdk.ServiceBus;
 using Service.ClientProfile.Grpc;
 using Service.ClientProfile.Grpc.Models.Requests;
 using Service.PersonalData.Grpc;
@@ -22,18 +23,21 @@ namespace Service.SimplexPayment.Services
         private readonly IClientProfileService _clientProfile;
         private readonly SimplexHttpClient _client;
         private readonly IPersonalDataServiceGrpc _personalData;
+        private readonly IServiceBusPublisher<SimplexIntention> _publisher;
+
         public SimplexPaymentService(
             ILogger<SimplexPaymentService> logger,
             DbContextOptionsBuilder<DatabaseContext> dbContextOptionsBuilder,
             IClientProfileService clientProfile,
             SimplexHttpClient client,
-            IPersonalDataServiceGrpc personalData)
+            IPersonalDataServiceGrpc personalData, IServiceBusPublisher<SimplexIntention> publisher)
         {
             _logger = logger;
             _dbContextOptionsBuilder = dbContextOptionsBuilder;
             _clientProfile = clientProfile;
             _client = client;
             _personalData = personalData;
+            _publisher = publisher;
         }
 
         public async Task<ExecuteQuoteResponse> RequestPayment(RequestPaymentRequest requestPaymentRequest)
@@ -135,6 +139,7 @@ namespace Service.SimplexPayment.Services
                 intention.Status = SimplexStatus.QuoteCreated;
                 intention.OrderId = orderId;
                 await context.UpsertAsync(new[] { intention });
+                await _publisher.PublishAsync(intention);
 
                 return new ExecuteQuoteResponse()
                 {
@@ -182,6 +187,41 @@ namespace Service.SimplexPayment.Services
                 throw;
             }
         }
+
+        public async Task<IntentionsInProgressResponse> CheckIntentionsInProgress(IntentionsInProgressRequest request)
+        {
+            await using var context = new DatabaseContext(_dbContextOptionsBuilder.Options);
+            var sentIntention = await context.Intentions.FirstOrDefaultAsync(t => t.BlockchainTxHash == request.TxId);
+            if (sentIntention != null)
+            {
+                sentIntention.ReceivedAmount = request.ReceivedVolume;
+                sentIntention.BlockchainFee = sentIntention.ToAmount - request.ReceivedVolume;
+                sentIntention.Status = SimplexStatus.CryptoReceived;
+                
+                await context.UpsertAsync(new[] {sentIntention});
+                await _publisher.PublishAsync(sentIntention);
+
+                return new IntentionsInProgressResponse()
+                {
+                    ShouldWait = false,
+                    MatchedIntention = sentIntention
+                };
+            }
+
+            var intentionsInProgress = await context.Intentions
+                .Where(t => t.ClientId == request.ClientId
+                            && t.ToAsset == request.AssetId
+                            && (t.Status == SimplexStatus.PaymentSubmitted ||
+                                t.Status == SimplexStatus.PaymentApproved))
+                .ToListAsync();
+
+            return new IntentionsInProgressResponse()
+            {
+                ShouldWait = intentionsInProgress.Any(),
+                MatchedIntention = null
+            };
+        }
+
 
     }
 }

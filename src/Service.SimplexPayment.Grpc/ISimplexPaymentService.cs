@@ -12,5 +12,8 @@ namespace Service.SimplexPayment.Grpc
         
         [OperationContract]
         Task<GetIntentionsResponse> GetIntentions(GetIntentionsRequest request);
+
+        [OperationContract]
+        Task<IntentionsInProgressResponse> CheckIntentionsInProgress(IntentionsInProgressRequest request);
     }
 }
