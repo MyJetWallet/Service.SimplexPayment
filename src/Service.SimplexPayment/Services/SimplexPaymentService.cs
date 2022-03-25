@@ -191,7 +191,7 @@ namespace Service.SimplexPayment.Services
         public async Task<IntentionsInProgressResponse> CheckIntentionsInProgress(IntentionsInProgressRequest request)
         {
             await using var context = new DatabaseContext(_dbContextOptionsBuilder.Options);
-            var sentIntention = await context.Intentions.FirstOrDefaultAsync(t => t.BlockchainTxHash == request.TxId);
+            var sentIntention = await context.Intentions.FirstOrDefaultAsync(t => t.BlockchainTxHash == request.TxId && t.ClientId == request.ClientId);
             if (sentIntention != null)
             {
                 sentIntention.ReceivedAmount = request.ReceivedVolume;
