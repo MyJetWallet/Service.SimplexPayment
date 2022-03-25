@@ -88,7 +88,8 @@ namespace Service.SimplexPayment.Services
                     Status = SimplexStatus.QuoteCreated,
                     BaseFiatAmount = quoteResponse.FiatMoney.BaseAmount,
                     TotalFiatAmount = quoteResponse.FiatMoney.TotalAmount,
-                    Fee = quoteResponse.FiatMoney.TotalAmount - quoteResponse.FiatMoney.BaseAmount
+                    Fee = quoteResponse.FiatMoney.TotalAmount - quoteResponse.FiatMoney.BaseAmount,
+                    WalletId = requestPaymentRequest.WalletId
                 };
                 await using var context = new DatabaseContext(_dbContextOptionsBuilder.Options);
                 await context.UpsertAsync(new[] { intention });

@@ -21,5 +21,7 @@ namespace Service.SimplexPayment.Grpc.Models
         public string DepositAddress { get; set; }
         [DataMember(Order = 8)]
         public string DepositTag { get; set; }
+        [DataMember(Order = 9)]
+        public string WalletId { get; set; }
     }
 }
