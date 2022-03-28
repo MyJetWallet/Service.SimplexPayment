@@ -43,7 +43,7 @@ namespace Service.SimplexPayment.Jobs
             _paymentWriter = paymentWriter;
             _simplexWriter = simplexWriter;
 
-            _timer = new MyTaskTimer(typeof(SimplexEventCleaningJob), TimeSpan.FromMinutes(1), logger, DoProcess);
+            _timer = new MyTaskTimer(typeof(SimplexEventCleaningJob), TimeSpan.FromSeconds(Program.Settings.TimerPeriodInSec), logger, DoProcess);
         }
 
         private async Task DoProcess()

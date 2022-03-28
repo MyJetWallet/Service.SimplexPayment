@@ -47,5 +47,8 @@ namespace Service.SimplexPayment.Settings
         [YamlProperty("SimplexPayment.ApiKeyId")]
         public string ApiKeyId { get; set; }
 
+        [YamlProperty("SimplexPayment.TimerPeriodInSec")]
+        public int TimerPeriodInSec { get; set; }
+
     }
 }
