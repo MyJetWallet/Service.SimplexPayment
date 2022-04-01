@@ -21,7 +21,7 @@ public class FiatTotalAmount
 public class CryptoTotalAmount
 {
     [JsonPropertyName("amount")]
-    public decimal Amount { get; set; }
+    public decimal? Amount { get; set; }
 
     [JsonPropertyName("currency")]
     public string Currency { get; set; }
