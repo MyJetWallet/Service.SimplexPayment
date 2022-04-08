@@ -50,7 +50,7 @@ namespace Service.SimplexPayment.Modules
                 .SingleInstance()
                 .AutoActivate();
 
-            builder.RegisterEncryptionServiceClient("simplex-payment", () => Program.Settings.MyNoSqlWriterUrl);
+            builder.RegisterEncryptionServiceClient();
         }
     }
 }
