@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -61,18 +62,39 @@ namespace Service.SimplexPayment.Services
                     Id = requestPaymentRequest.ClientId
                 });
 
-                var quoteResponse = await _client.GetQuote(
-                    new GetQuoteRequestModel
+                GetQuoteResponseModel quoteResponse;
+                try
+                {
+                    quoteResponse = await _client.GetQuote(
+                        new GetQuoteRequestModel
+                        {
+                            EndUserId = profile.ExternalClientId,
+                            DigitalCurrency = requestPaymentRequest.ToAsset,
+                            FiatCurrency = requestPaymentRequest.FromCurrency,
+                            RequestedCurrency = requestPaymentRequest.FromCurrency,
+                            RequestedAmount = requestPaymentRequest.FromAmount,
+                            WalletId = Program.Settings.SimplexWalletId,
+                            ClientIp = requestPaymentRequest.ClientIp,
+                            PaymentMethods = new() {"credit_card"}
+                        });
+                }
+                catch (HttpRequestException e)
+                {
+                    return new ExecuteQuoteResponse()
                     {
-                        EndUserId = profile.ExternalClientId,
-                        DigitalCurrency = requestPaymentRequest.ToAsset,
-                        FiatCurrency = requestPaymentRequest.FromCurrency,
-                        RequestedCurrency = requestPaymentRequest.FromCurrency,
-                        RequestedAmount = requestPaymentRequest.FromAmount,
-                        WalletId = Program.Settings.SimplexWalletId,
-                        ClientIp = requestPaymentRequest.ClientIp,
-                        PaymentMethods = new() { "credit_card" }
-                    });
+                        IsSuccess = false,
+                        ErrorCode = "Simplex unavailable"
+                    };
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "When generating simplex quote");
+                    return new ExecuteQuoteResponse()
+                    {
+                        IsSuccess = false,
+                        ErrorCode = e.Message
+                    };
+                }
 
                 var intention = new SimplexIntention
                 {
