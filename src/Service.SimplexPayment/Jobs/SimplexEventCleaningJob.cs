@@ -128,7 +128,7 @@ namespace Service.SimplexPayment.Jobs
         private async Task CalculatePendingBalances(DatabaseContext context)
         {
             var data = await context.Intentions
-                .Where(e => e.Status == SimplexStatus.PaymentSubmitted || e.Status == SimplexStatus.PaymentApproved)
+                .Where(e => e.Status == SimplexStatus.PaymentSubmitted || e.Status == SimplexStatus.PaymentApproved  || e.Status == SimplexStatus.CryptoSent)
                 .GroupBy(e => new {e.ClientId, e.ToAsset})
                 .Select(e => new {ClientId = e.Key.ClientId, Asset = e.Key.ToAsset, Amount = e.Sum(i => i.ToAmount)})
                 .ToListAsync();
