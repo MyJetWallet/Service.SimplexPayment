@@ -83,6 +83,9 @@ namespace Service.SimplexPayment.Jobs
                     
                     intention.Status = status;
                     intention.BlockchainTxHash = simplexEvent.Payment.BlockchainTxHash;
+
+                    if (intention.Status == SimplexStatus.Declined && intention.CreationTime < DateTime.UtcNow.AddDays(-2))
+                        intention.Status = SimplexStatus.Expired;
                     
                     await _publisher.PublishAsync(intention);
                     await context.UpsertAsync(new[] {intention});

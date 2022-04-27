@@ -9,5 +9,6 @@ namespace Service.SimplexPayment.Domain.Models
         Refunded = 40, //payment_simplexcc_refunded
         CryptoSent = 50, //payment_simplexcc_crypto_sent
         CryptoReceived = 60, //got signal from our deposit detector
+        Expired = 70, //Payment wasn't submitted 
     }
 }
