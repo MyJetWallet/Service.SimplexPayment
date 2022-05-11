@@ -25,7 +25,7 @@ namespace Service.SimplexPayment.Modules
             builder.RegisterMyNoSqlWriter<SimplexEventsNoSqlEntity>(() => Program.Settings.MyNoSqlWriterUrl,
                 SimplexEventsNoSqlEntity.TableName);
             
-            var noSqlClient = builder.CreateNoSqlClient((() => Program.Settings.MyNoSqlReaderHostPort));
+            var noSqlClient = builder.CreateNoSqlClient(Program.Settings.MyNoSqlReaderHostPort, Program.LogFactory);
             builder.RegisterClientProfileClients(noSqlClient, Program.Settings.ClientProfileGrpcServiceUrl); 
             builder.RegisterPersonalDataClient(Program.Settings.PersonalDataServiceUrl);
             
