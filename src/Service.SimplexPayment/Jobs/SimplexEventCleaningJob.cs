@@ -13,6 +13,8 @@ using MyNoSqlServer.DataWriter;
 using MyServiceBus.Abstractions;
 using Service.SimplexPayment.Domain.Models;
 using Service.SimplexPayment.Domain.Models.NoSql;
+using Service.SimplexPayment.Grpc;
+using Service.SimplexPayment.Grpc.Models;
 using Service.SimplexPayment.Postgres;
 using Service.SimplexPayment.Services;
 
@@ -27,14 +29,15 @@ namespace Service.SimplexPayment.Jobs
         private readonly IServiceBusPublisher<SimplexIntention> _publisher;
         private readonly IMyNoSqlServerDataWriter<PendingPaymentNoSqlEntity> _paymentWriter;
         private readonly IMyNoSqlServerDataWriter<SimplexEventsNoSqlEntity> _simplexWriter;
-        
+        private readonly IInProgressBuysService _inProgressBuysService;
         public SimplexEventCleaningJob(
             ILogger<SimplexEventCleaningJob> logger, 
             SimplexHttpClient client,
             DbContextOptionsBuilder<DatabaseContext> dbContextOptionsBuilder,
             IServiceBusPublisher<SimplexIntention> publisher,
             IMyNoSqlServerDataWriter<PendingPaymentNoSqlEntity> paymentWriter,
-            IMyNoSqlServerDataWriter<SimplexEventsNoSqlEntity> simplexWriter)
+            IMyNoSqlServerDataWriter<SimplexEventsNoSqlEntity> simplexWriter, 
+            IInProgressBuysService inProgressBuysService)
         {
             _logger = logger;
             _client = client;
@@ -42,6 +45,7 @@ namespace Service.SimplexPayment.Jobs
             _publisher = publisher;
             _paymentWriter = paymentWriter;
             _simplexWriter = simplexWriter;
+            _inProgressBuysService = inProgressBuysService;
 
             _timer = new MyTaskTimer(typeof(SimplexEventCleaningJob), TimeSpan.FromSeconds(Program.Settings.TimerPeriodInSec), logger, DoProcess);
         }
@@ -144,6 +148,14 @@ namespace Service.SimplexPayment.Jobs
                 .ToList();
             
             await _paymentWriter.CleanAndBulkInsertAsync(items);
+            foreach (var item in data)
+            {
+                await _inProgressBuysService.GetInProgressBuys(new InProgressRequest()
+                {
+                    Asset = item.Asset,
+                    ClientId = item.ClientId
+                });
+            }
         }
 
         public void Start()

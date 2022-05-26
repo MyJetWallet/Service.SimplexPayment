@@ -9,6 +9,7 @@ using Service.PersonalData.Client;
 using Service.SimplexPayment.Domain;
 using Service.SimplexPayment.Domain.Models;
 using Service.SimplexPayment.Domain.Models.NoSql;
+using Service.SimplexPayment.Grpc;
 using Service.SimplexPayment.Jobs;
 using Service.SimplexPayment.Services;
 
@@ -24,6 +25,8 @@ namespace Service.SimplexPayment.Modules
                 PendingPaymentNoSqlEntity.TableName);
             builder.RegisterMyNoSqlWriter<SimplexEventsNoSqlEntity>(() => Program.Settings.MyNoSqlWriterUrl,
                 SimplexEventsNoSqlEntity.TableName);
+            builder.RegisterMyNoSqlWriter<BuysInProgressNoSqlEntity>(() => Program.Settings.MyNoSqlWriterUrl,
+                BuysInProgressNoSqlEntity.TableName);
             
             var noSqlClient = builder.CreateNoSqlClient(Program.Settings.MyNoSqlReaderHostPort, Program.LogFactory);
             builder.RegisterClientProfileClients(noSqlClient, Program.Settings.ClientProfileGrpcServiceUrl); 
@@ -47,6 +50,12 @@ namespace Service.SimplexPayment.Modules
             builder
                 .RegisterType<SimplexEventCleaningJob>()
                 .AsSelf()
+                .SingleInstance()
+                .AutoActivate();
+            
+            builder
+                .RegisterType<InProgressBuysService>()
+                .As<IInProgressBuysService>()
                 .SingleInstance()
                 .AutoActivate();
 
