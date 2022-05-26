@@ -22,8 +22,6 @@ namespace Service.SimplexPayment.Client
             var subs = new MyNoSqlReadRepository<BuysInProgressNoSqlEntity>(myNoSqlSubscriber, BuysInProgressNoSqlEntity.TableName);
 
             var factory = new SimplexPaymentClientFactory(grpcServiceUrl, subs);
-
-            builder.RegisterInstance(factory.GetSimplexService()).As<IInProgressBuysService>().SingleInstance();
             
             builder
                 .RegisterInstance(subs)
