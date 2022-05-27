@@ -32,6 +32,7 @@ namespace Service.SimplexPayment
             app.ConfigureJetWallet(env, endpoints =>
             {
                 endpoints.MapGrpcSchema<SimplexPaymentServiceGrpc, ISimplexPaymentService>();
+                endpoints.MapGrpcSchema<InProgressBuysService, IInProgressBuysService>();
                 endpoints.RegisterGrpcServices();
             });
         }
