@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 using Autofac;
 using Microsoft.EntityFrameworkCore;
@@ -30,6 +31,9 @@ namespace Service.SimplexPayment.Jobs
         private readonly IMyNoSqlServerDataWriter<PendingPaymentNoSqlEntity> _paymentWriter;
         private readonly IMyNoSqlServerDataWriter<SimplexEventsNoSqlEntity> _simplexWriter;
         private readonly IInProgressBuysService _inProgressBuysService;
+        private int _errorCount;
+        private const int MaxErrorCount = 10;
+        
         public SimplexEventCleaningJob(
             ILogger<SimplexEventCleaningJob> logger, 
             SimplexHttpClient client,
@@ -111,11 +115,26 @@ namespace Service.SimplexPayment.Jobs
                 
                 await CalculatePendingBalances(context);
             }
+            catch (HttpRequestException e)
+            {
+                if (_errorCount < MaxErrorCount)
+                {
+                    _logger.LogWarning(e, "Unable to reach simplex");
+                    _errorCount++;
+                }
+                else
+                {
+                    _logger.LogError(e, "Unable to reach simplex");
+                }
+                return;
+            }
             catch (Exception e)
             {
                 _logger.LogError(e, "When cleaning Simplex events");
-                throw;
+                return;
             }
+
+            _errorCount = 0;
             
             //locals
             SimplexStatus MapEventToStatus(string name)
