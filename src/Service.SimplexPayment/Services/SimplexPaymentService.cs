@@ -12,6 +12,7 @@ using Service.ClientProfile.Grpc.Models.Requests;
 using Service.PersonalData.Grpc;
 using Service.PersonalData.Grpc.Contracts;
 using Service.SimplexPayment.Domain.Models;
+using Service.SimplexPayment.Grpc;
 using Service.SimplexPayment.Grpc.Models;
 using Service.SimplexPayment.Postgres;
 
@@ -25,13 +26,14 @@ namespace Service.SimplexPayment.Services
         private readonly SimplexHttpClient _client;
         private readonly IPersonalDataServiceGrpc _personalData;
         private readonly IServiceBusPublisher<SimplexIntention> _publisher;
+        private readonly IInProgressBuysService _inProgressBuysService;
 
         public SimplexPaymentService(
             ILogger<SimplexPaymentService> logger,
             DbContextOptionsBuilder<DatabaseContext> dbContextOptionsBuilder,
             IClientProfileService clientProfile,
             SimplexHttpClient client,
-            IPersonalDataServiceGrpc personalData, IServiceBusPublisher<SimplexIntention> publisher)
+            IPersonalDataServiceGrpc personalData, IServiceBusPublisher<SimplexIntention> publisher, IInProgressBuysService inProgressBuysService)
         {
             _logger = logger;
             _dbContextOptionsBuilder = dbContextOptionsBuilder;
@@ -39,6 +41,7 @@ namespace Service.SimplexPayment.Services
             _client = client;
             _personalData = personalData;
             _publisher = publisher;
+            _inProgressBuysService = inProgressBuysService;
         }
 
         public async Task<ExecuteQuoteResponse> RequestPayment(RequestPaymentRequest requestPaymentRequest)
@@ -223,6 +226,19 @@ namespace Service.SimplexPayment.Services
                 
                 await context.UpsertAsync(new[] {sentIntention});
                 await _publisher.PublishAsync(sentIntention);
+
+                try
+                {
+                    await _inProgressBuysService.GetInProgressBuys(new InProgressRequest()
+                    {
+                        Asset = sentIntention.ToAsset,
+                        ClientId = sentIntention.ClientId
+                    });
+                }
+                catch (Exception e)
+                {
+                    _logger.LogError(e, "Unable to calculate inprogress buys. Request: {request}", request.ToJson());
+                }
 
                 return new IntentionsInProgressResponse()
                 {
