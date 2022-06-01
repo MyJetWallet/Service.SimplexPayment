@@ -34,22 +34,27 @@ namespace Service.SimplexPayment.Services
         {
             try
             {
+             
+                var total = 0m;
+                var count = 0;
+
                 await using var context = new DatabaseContext(_dbContextOptionsBuilder.Options);
                 var intentions = await context.Intentions.Where(t => t.ToAsset == request.Asset && t.ClientId == request.ClientId && InProgressStatuses.Contains(t.Status) ).ToListAsync();
+                
                 if (intentions.Any())
                 {
-                    var total = intentions.Sum(t => t.ToAmount);
-                    var count = intentions.Count;
-
-                    await _writer.InsertOrReplaceAsync(
-                        BuysInProgressNoSqlEntity.Create(request.ClientId, request.Asset, total, count));
-                    
-                    return new InProgressResponse
-                    {
-                        TotalAmount = total,
-                        TxCount = count
-                    };
+                    total = intentions.Sum(t => t.ToAmount);
+                    count = intentions.Count;
                 }
+                
+                await _writer.InsertOrReplaceAsync(
+                    BuysInProgressNoSqlEntity.Create(request.ClientId, request.Asset, total, count));
+                    
+                return new InProgressResponse
+                {
+                    TotalAmount = total,
+                    TxCount = count
+                };
             }
             catch (Exception e)
             {
