@@ -19,11 +19,23 @@ namespace Service.SimplexPayment.Services
 
         public async Task<GetIntentionsResponse> GetIntentions(GetIntentionsRequest request)
         {
-            var list = await _simplexPaymentService.GetIntentions(request.Take, request.LastSeen, request.SearchText);
-            return new GetIntentionsResponse
+            try
             {
-                Intentions = list
-            };
+                var list = await _simplexPaymentService.GetIntentions(request);
+                return new GetIntentionsResponse
+                {
+                    Intentions = list
+                };
+            }
+            catch (Exception ex)
+            {
+                return new GetIntentionsResponse
+                {
+                    IsError = true,
+                    ErrorMessage = ex.Message
+                };
+            }
+
         }
 
         public async Task<IntentionsInProgressResponse> CheckIntentionsInProgress(IntentionsInProgressRequest request) => await _simplexPaymentService.CheckIntentionsInProgress(request);

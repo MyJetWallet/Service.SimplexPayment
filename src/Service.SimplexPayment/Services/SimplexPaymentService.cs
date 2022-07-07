@@ -184,28 +184,58 @@ namespace Service.SimplexPayment.Services
             }
         }
 
-        public async Task<List<SimplexIntention>> GetIntentions(int take, DateTime lastSeen, string searchText)
+        public async Task<List<SimplexIntention>> GetIntentions(GetIntentionsRequest request)
         {
             try
             {
                 await using var context = new DatabaseContext(_dbContextOptionsBuilder.Options);
-                if (take == 0)
-                    take = 20;
+                
+                if (request.Take == 0)
+                {
+                    request.Take = 20;
+                }
 
                 var query = context.Intentions.AsQueryable();
-                if (lastSeen != DateTime.MinValue)
-                    query = query.Where(t => t.CreationTime < lastSeen);
 
-                if (!string.IsNullOrWhiteSpace(searchText))
-                    query = query.Where(t => t.ClientId.Contains(searchText) ||
-                                     t.PaymentId.Contains(searchText) ||
-                                     t.FromCurrency.Contains(searchText) ||
-                                     t.ToAsset.Contains(searchText) ||
-                                     t.BlockchainTxHash.Contains(searchText) ||
-                                     t.QuoteId.Contains(searchText) ||
-                                     t.OrderId.Contains(searchText));
+                if (request.LastSeen != DateTime.MinValue)
+                {
+                    query = query.Where(t => t.CreationTime < request.LastSeen);
+                }
 
-                return await query.OrderByDescending(t => t.CreationTime).Take(take).ToListAsync();
+                if (!string.IsNullOrWhiteSpace(request.ClientId))
+                {
+                    query = query.Where(t => t.ClientId == request.ClientId);
+                }
+                
+                if (request.Status != null)
+                {
+                    query = query.Where(t => t.Status == request.Status);
+                }
+                
+                if (request.CreationDateFrom != null)
+                {
+                    query = query.Where(t => t.CreationTime >= request.CreationDateFrom);
+                }
+                
+                if (request.CreationDateTo != null)
+                {
+                    query = query.Where(t => t.CreationTime <= request.CreationDateTo);
+                }
+
+                if (!string.IsNullOrWhiteSpace(request.SearchText))
+                {
+                    query = query.Where(t => t.ClientId.Contains(request.SearchText) ||
+                                             t.PaymentId.Contains(request.SearchText) ||
+                                             t.FromCurrency.Contains(request.SearchText) ||
+                                             t.ToAsset.Contains(request.SearchText) ||
+                                             t.BlockchainTxHash.Contains(request.SearchText) ||
+                                             t.QuoteId.Contains(request.SearchText) ||
+                                             t.OrderId.Contains(request.SearchText));
+                }
+
+                return await query.OrderByDescending(t => t.CreationTime)
+                    .Take(request.Take)
+                    .ToListAsync();
             }
             catch (Exception e)
             {
