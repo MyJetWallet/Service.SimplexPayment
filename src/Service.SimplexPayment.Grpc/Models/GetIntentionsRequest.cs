@@ -14,4 +14,6 @@ public class GetIntentionsRequest
     [DataMember(Order = 5)] public string ClientId { get; set; }
     [DataMember(Order = 6)] public DateTime? CreationDateFrom { get; set; }
     [DataMember(Order = 7)] public DateTime? CreationDateTo { get; set; }
+    [DataMember(Order = 8)] public string FromCurrency { get; set; }
+    [DataMember(Order = 9)] public string ToAsset { get; set; }
 }

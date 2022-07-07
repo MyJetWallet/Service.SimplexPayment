@@ -207,6 +207,16 @@ namespace Service.SimplexPayment.Services
                     query = query.Where(t => t.ClientId == request.ClientId);
                 }
                 
+                if (!string.IsNullOrWhiteSpace(request.FromCurrency))
+                {
+                    query = query.Where(t => t.FromCurrency == request.FromCurrency);
+                }
+                
+                if (!string.IsNullOrWhiteSpace(request.ToAsset))
+                {
+                    query = query.Where(t => t.ToAsset == request.ToAsset);
+                }
+                
                 if (request.Status != null)
                 {
                     query = query.Where(t => t.Status == request.Status);
